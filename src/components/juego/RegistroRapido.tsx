@@ -43,15 +43,21 @@ export function RegistroRapido({ categorias }: { categorias: CategoriaRegistrabl
   function confirmar() {
     if (!actividad) return;
     iniciarEnvio(async () => {
-      const r = await registrarActividad({
-        actividadId: actividad.id,
-        cantidad,
-        intensidad,
-      });
-      setResultado(r);
-      if (r.ok) {
-        router.refresh();
-        setTimeout(() => router.push('/'), r.subioNivel ? 3200 : 2000);
+      try {
+        const r = await registrarActividad({
+          actividadId: actividad.id,
+          cantidad,
+          intensidad,
+        });
+        setResultado(r);
+        if (r.ok) {
+          router.refresh();
+          setTimeout(() => router.push('/'), r.subioNivel ? 3200 : 2000);
+        }
+      } catch {
+        // Sin esto, un fallo del servidor deja el boton en "Guardando..."
+        // para siempre y la sesion registrada se pierde sin avisar.
+        setResultado({ ok: false, error: 'No se ha podido guardar. Intentalo otra vez.' });
       }
     });
   }

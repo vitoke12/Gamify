@@ -93,8 +93,6 @@ export async function contextoDelDia(dia: string): Promise<ContextoCalculo> {
     prisma.profile.findUnique({ where: { id: PERFIL } }),
   ]);
 
-  const keyPorId = new Map(categorias.map((c) => [c.id, c.key]));
-
   const actividades: Record<string, Actividad> = {};
   for (const a of actividadesDb) {
     actividades[a.id] = {

@@ -14,9 +14,17 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
+/**
+ * La clase `dark` es fija: shadcn cuelga sus tokens de ella y esta app no
+ * tiene modo claro. Sin ella, el `body { @apply bg-background }` que instala
+ * shadcn pinta la app de blanco.
+ *
+ * Sin next/font/google a proposito: la tipografia del sistema evita que el
+ * build dependa de una descarga y en movil se ve igual de bien.
+ */
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="es" className="h-full antialiased">
+    <html lang="es" className="dark h-full antialiased">
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
