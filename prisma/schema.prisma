@@ -1,0 +1,330 @@
+// GAMIFY - esquema de datos.
+//
+// SQLite en desarrollo, portable a PostgreSQL sin cambios de modelo.
+// Restricciones asumidas por esa portabilidad:
+//   * sin `enum`            -> String + union de TS/zod en lib/domain/tipos.ts
+//   * sin listas escalares  -> tabla puente NodeRequirement
+//   * sin `Json`            -> String con JSON + helpers tipados en lib/db/json.ts
+//
+// `profileId` con default "me" es el gancho para multi-cuenta: hoy es una
+// columna suelta, manana es una clave foranea. Ningun modelo se reescribe.
+//
+// Nada de XP ni de puntos se guarda como campo mutable: nivel, puntos y clase
+// se derivan de XpEntry + UserNode + RespecEvent. Lo unico que se acumula en
+// columnas es la racha, porque su historia depende de los congeladores
+// consumidos y eso no es reconstruible desde los logs.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: la URL de conexion vive en prisma.config.ts, no aqui, y el
+// cliente se conecta con un driver adapter (@prisma/adapter-better-sqlite3).
+datasource db {
+  provider = "sqlite"
+}
+
+// ─────────────── CATALOGO (sale del seed, se edita en /config) ───────────────
+
+model Category {
+  id            String  @id @default(cuid())
+  key           String  @unique
+  nombre        String
+  esfera        String // interior | expresion | base
+  icono         String
+  color         String // resuelto desde la esfera
+  orden         Int
+  topeDiarioMin Int     @default(180)
+  activa        Boolean @default(true)
+
+  branches    SkillBranch[]
+  activities  Activity[]
+  logs        ActivityLog[]
+  xpEntries   XpEntry[]
+  quests      Quest[]
+  streaks     Streak[]
+  respecs     RespecEvent[]
+  senseChecks SenseCheck[]
+
+  @@index([orden])
+}
+
+model SkillBranch {
+  id          String  @id @default(cuid())
+  categoryId  String
+  key         String  @unique
+  nombre      String
+  descripcion String?
+  orden       Int
+
+  category Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  nodes    SkillNode[]
+
+  @@index([categoryId, orden])
+}
+
+model SkillNode {
+  id              String  @id @default(cuid())
+  branchId        String
+  key             String  @unique
+  nombre          String
+  descripcion     String?
+  tier            Int
+  maxLevel        Int     @default(1)
+  costePuntos     Int
+  esMaestria      Boolean @default(false)
+  retoDescripcion String?
+  orden           Int     @default(0)
+
+  branch       SkillBranch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  requisitos   NodeRequirement[] @relation("nodo")
+  requeridoPor NodeRequirement[] @relation("requisito")
+  activities   Activity[]
+  userNodes    UserNode[]
+
+  @@index([branchId, tier, orden])
+}
+
+// Sustituye a requiereNodeIds[]: SQLite no tiene listas escalares y ademas
+// asi hay integridad referencial de verdad.
+model NodeRequirement {
+  nodeId      String
+  requisitoId String
+
+  nodo      SkillNode @relation("nodo", fields: [nodeId], references: [id], onDelete: Cascade)
+  requisito SkillNode @relation("requisito", fields: [requisitoId], references: [id], onDelete: Cascade)
+
+  @@id([nodeId, requisitoId])
+  @@index([requisitoId])
+}
+
+model Activity {
+  id               String  @id @default(cuid())
+  key              String  @unique
+  categoryId       String // obligatorio: la XP siempre tiene categoria
+  nodeId           String? // opcional: Ocio y categorias sin ramas
+  nombre           String
+  unidad           String // minutos | repeticiones | paginas
+  minutosPorUnidad Float   @default(1)
+  xpBasePorMinuto  Float   @default(3)
+  tierEquivalente  Int     @default(1)
+  activa           Boolean @default(true)
+  orden            Int     @default(0)
+
+  category Category      @relation(fields: [categoryId], references: [id])
+  node     SkillNode?    @relation(fields: [nodeId], references: [id])
+  logs     ActivityLog[]
+  quests   Quest[]
+
+  @@index([categoryId, orden])
+}
+
+model Achievement {
+  id           String  @id @default(cuid())
+  key          String  @unique
+  nombre       String
+  descripcion  String
+  esSecreto    Boolean @default(false)
+  condicionKey String
+  orden        Int     @default(0)
+
+  desbloqueos UserAchievement[]
+}
+
+// ─────────────── ESTADO DEL JUGADOR ───────────────
+
+model Profile {
+  id           String   @id @default("me")
+  nombre       String   @default("Yo")
+  zonaHoraria  String   @default("Europe/Madrid")
+  horaCorteDia Int      @default(5) // el dia logico empieza a las 05:00
+  avatarJson   String   @default("{}")
+  creadoEn     DateTime @default(now())
+}
+
+model UserNode {
+  id                   String    @id @default(cuid())
+  profileId            String    @default("me")
+  nodeId               String
+  nivelActual          Int       @default(1)
+  puntosGastados       Int
+  desbloqueadoEn       DateTime  @default(now())
+  maestriaVerificadaEn DateTime?
+  maestriaEvidenciaUrl String?
+
+  node SkillNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, nodeId])
+}
+
+// Log inmutable. Se reescribe solo al recalcular el dia entero, y entonces
+// los factores quedan guardados para poder auditar el resultado.
+model ActivityLog {
+  id                 String   @id @default(cuid())
+  profileId          String   @default("me")
+  activityId         String
+  categoryId         String // desnormalizado: topes y consultas por categoria
+  fecha              DateTime // instante real
+  diaLogico          String // "2026-09-04", corte a las 05:00 locales
+  cantidad           Float // en la unidad de la actividad
+  duracionBrutaMin   Float // antes del tope diario
+  duracionMin        Float // computable tras el tope
+  intensidad         Float // 0.8 | 1.0 | 1.5
+  dificultadRelativa Float // 1.0 - 2.0
+  modificadoresJson  String   @default("{}")
+  xpBase             Int
+  xpCalculado        Int
+  versionFormula     Int      @default(1)
+  evidenciaUrl       String?
+  nota               String?
+  creadoEn           DateTime @default(now())
+
+  activity  Activity  @relation(fields: [activityId], references: [id])
+  category  Category  @relation(fields: [categoryId], references: [id])
+  xpEntries XpEntry[]
+
+  @@index([profileId, diaLogico])
+  @@index([categoryId, diaLogico])
+  @@index([activityId, diaLogico])
+}
+
+// Libro mayor de XP: unica fuente de los totales. Las misiones y los cofres
+// tambien dan XP y no son actividades, asi que necesitan entrar por aqui.
+model XpEntry {
+  id         String   @id @default(cuid())
+  profileId  String   @default("me")
+  categoryId String
+  origen     String // actividad | mision | cofre | logro | ajuste
+  origenId   String?
+  logId      String?
+  diaLogico  String
+  xp         Int
+  creadoEn   DateTime @default(now())
+
+  category Category     @relation(fields: [categoryId], references: [id])
+  log      ActivityLog? @relation(fields: [logId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, categoryId])
+  @@index([profileId, diaLogico])
+}
+
+model Quest {
+  id            String    @id @default(cuid())
+  profileId     String    @default("me")
+  plantillaKey  String // del pool: sostiene la regla de no repetir >2 por semana
+  tipo          String // principal | secundaria | sorpresa | ocio | semanal
+  diaLogico     String
+  semanaIso     String
+  categoryId    String?
+  activityId    String?
+  descripcion   String
+  objetivoJson  String    @default("{}")
+  xpRecompensa  Int
+  multiplicador Float?
+  estado        String    @default("ofrecida") // ofrecida | aceptada | completada | caducada
+  completadaEn  DateTime?
+  creadoEn      DateTime  @default(now())
+
+  category    Category? @relation(fields: [categoryId], references: [id])
+  activity    Activity? @relation(fields: [activityId], references: [id])
+  recompensas Reward[]
+
+  @@index([profileId, diaLogico])
+  @@index([plantillaKey, semanaIso])
+}
+
+model Reward {
+  id          String    @id @default(cuid())
+  profileId   String    @default("me")
+  questId     String?
+  tipo        String // titulo | cosmetico | multiplicador | xp
+  valorJson   String    @default("{}")
+  otorgadoEn  DateTime  @default(now())
+  consumidoEn DateTime?
+  expiraEn    DateTime?
+
+  quest Quest? @relation(fields: [questId], references: [id])
+
+  @@index([profileId, consumidoEn])
+}
+
+model Streak {
+  id                    String   @id @default(cuid())
+  profileId             String   @default("me")
+  clave                 String // "global" | "cat:fisico"
+  categoryId            String?
+  diasActuales          Int      @default(0)
+  diasMaximos           Int      @default(0)
+  ultimoDiaLogico       String?
+  congeladoresRestantes Int      @default(2)
+  congeladoresMes       String // "2026-09": mes del cupo vigente
+  actualizadoEn         DateTime @updatedAt
+
+  category   Category?      @relation(fields: [categoryId], references: [id])
+  congelados StreakFreeze[]
+
+  @@unique([profileId, clave])
+}
+
+model StreakFreeze {
+  id        String   @id @default(cuid())
+  streakId  String
+  diaLogico String
+  usadoEn   DateTime @default(now())
+
+  streak Streak @relation(fields: [streakId], references: [id], onDelete: Cascade)
+
+  @@unique([streakId, diaLogico])
+}
+
+model ClassSnapshot {
+  id               String   @id @default(cuid())
+  profileId        String   @default("me")
+  mes              String // "2026-09"
+  claseKey         String
+  tipo             String // pura | hibrida | polimata
+  dominantesJson   String   @default("[]") // sustituye a categoriasDominantes[]
+  distribucionJson String   @default("{}")
+  creadoEn         DateTime @default(now())
+
+  @@unique([profileId, mes])
+}
+
+model UserAchievement {
+  id             String   @id @default(cuid())
+  profileId      String   @default("me")
+  achievementId  String
+  desbloqueadoEn DateTime @default(now())
+  contextoJson   String   @default("{}")
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, achievementId])
+}
+
+model RespecEvent {
+  id              String   @id @default(cuid())
+  profileId       String   @default("me")
+  categoryId      String
+  puntosDevueltos Int
+  nodosJson       String   @default("[]")
+  realizadoEn     DateTime @default(now())
+
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@index([profileId, categoryId, realizadoEn])
+}
+
+model SenseCheck {
+  id           String   @id @default(cuid())
+  profileId    String   @default("me")
+  categoryId   String
+  periodo      String // "2026-09"
+  respuesta    String // si | algo | no
+  nota         String?
+  respondidoEn DateTime @default(now())
+
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([profileId, categoryId, periodo])
+}
