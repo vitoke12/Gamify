@@ -3,7 +3,7 @@
  * y es la unica que sabe que existe una base de datos: /lib/domain nunca
  * importa Prisma, por eso sus tests corren sin levantar nada.
  */
-import { diaLogico, sumarDias } from '@/lib/domain/dia';
+import { diaLogico, diferenciaDias, sumarDias } from '@/lib/domain/dia';
 import { categoriaMasDescuidada, estadoDeCategorias } from '@/lib/domain/perfil';
 import { progresoDesdeXp } from '@/lib/domain/niveles';
 import { calcularRacha } from '@/lib/domain/rachas';
@@ -164,13 +164,14 @@ export type ResumenHome = Awaited<ReturnType<typeof resumenHome>>;
 
 export async function resumenHome() {
   const hoy = await diaDeHoy();
-  const [categorias, xpKeys, diasConActividad, perfil] = await Promise.all([
+  const [categorias, xpKeys, rachaDb, perfil] = await Promise.all([
     prisma.category.findMany({ orderBy: { orden: 'asc' } }),
     xpPorCategoria(),
-    prisma.activityLog.findMany({
-      where: { profileId: PERFIL },
-      select: { diaLogico: true },
-      distinct: ['diaLogico'],
+    // La racha se LEE de su tabla, no se recalcula aqui: es la unica que
+    // sabe que dias se perdonaron con un congelador. Recalcularla por libre
+    // enseñaba un 0 mientras la cadena seguia viva en la base.
+    prisma.streak.findUnique({
+      where: { profileId_clave: { profileId: PERFIL, clave: 'global' } },
     }),
     prisma.profile.findUnique({ where: { id: PERFIL } }),
   ]);
@@ -193,10 +194,14 @@ export async function resumenHome() {
     hoy,
     nombre: perfil?.nombre ?? 'Yo',
     global: progresoDesdeXp(xpTotal),
-    racha: calcularRacha(
-      diasConActividad.map((d) => d.diaLogico),
-      hoy,
-    ),
+    racha: {
+      diasActuales: rachaDb?.diasActuales ?? 0,
+      diasMaximos: rachaDb?.diasMaximos ?? 0,
+      ultimoDia: rachaDb?.ultimoDiaLogico ?? null,
+      enRiesgo: rachaDb?.ultimoDiaLogico
+        ? diferenciaDias(rachaDb.ultimoDiaLogico, hoy) === 1
+        : false,
+    },
     puntosLibres: estados.reduce((a, e) => a + e.puntosGanados, 0) - puntosGastados,
     categorias: categorias.map((c) => ({
       key: c.key,

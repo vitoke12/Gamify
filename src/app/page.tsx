@@ -1,7 +1,9 @@
 import Link from 'next/link';
-import { Flame, Plus } from 'lucide-react';
+import { Flame, Plus, Snowflake, Sparkles } from 'lucide-react';
 import { BarraProgreso } from '@/components/juego/BarraProgreso';
 import { resumenHome, ultimosRegistros } from '@/lib/db/consultas';
+import { categoriasConArbol } from '@/lib/db/arbol';
+import { congeladoresGlobales, sincronizarRachas } from '@/lib/db/rachas';
 import { fraseDeContexto } from '@/lib/domain/perfil';
 import { acentoDe, formatearXp, iconoDe } from '@/lib/ui/esferas';
 
@@ -9,8 +11,18 @@ import { acentoDe, formatearXp, iconoDe } from '@/lib/ui/esferas';
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const [resumen, ultimos] = await Promise.all([resumenHome(), ultimosRegistros(4)]);
+  // Antes de leer nada: poner las rachas al día. Es idempotente y no necesita
+  // cron; los congeladores que se hayan gastado vuelven como avisos.
+  const avisos = await sincronizarRachas();
+
+  const [resumen, ultimos, conArbol, congeladores] = await Promise.all([
+    resumenHome(),
+    ultimosRegistros(4),
+    categoriasConArbol(),
+    congeladoresGlobales(),
+  ]);
   const { global, racha } = resumen;
+  const keysConArbol = new Set(conArbol.map((c) => c.key));
 
   return (
     <>
@@ -42,6 +54,32 @@ export default async function Home() {
           </div>
         </header>
 
+        {/* Un congelador gastado se avisa siempre: consumirlo en silencio seria
+            quitarle al usuario justo la informacion que le importa. */}
+        {avisos.length > 0 && (
+          <div className="mt-4 rounded-xl border border-sky-800/60 bg-sky-950/30 px-4 py-3">
+            <div className="flex items-center gap-2 text-sm text-sky-300">
+              <Snowflake className="size-4 shrink-0" />
+              <span className="font-medium">Racha salvada</span>
+            </div>
+            <p className="mt-1 text-xs text-sky-200/80">
+              {avisos[0].diasPerdonados.length === 1
+                ? 'Ayer no registraste nada y se ha usado un congelador.'
+                : `Se han usado ${avisos[0].diasPerdonados.length} congeladores por los dias que faltaban.`}{' '}
+              Te {avisos[0].congeladoresRestantes === 1 ? 'queda' : 'quedan'}{' '}
+              {avisos[0].congeladoresRestantes} este mes.
+            </p>
+          </div>
+        )}
+
+        {racha.enRiesgo && avisos.length === 0 && (
+          <p className="mt-4 rounded-xl border border-amber-800/60 bg-amber-950/25 px-4 py-3 text-xs text-amber-200/85">
+            Hoy no has registrado nada todavia. Tu racha de {racha.diasActuales} dias aguanta
+            hasta el final del dia; despues se gastaria un congelador
+            {congeladores === 1 ? ' (te queda 1 este mes).' : ` (te quedan ${congeladores} este mes).`}
+          </p>
+        )}
+
         {/* 2. Progreso al siguiente nivel. Va aqui arriba porque estar cerca
             de completar es el disparador de accion mas potente del sistema. */}
         <section className="mt-6 rounded-2xl border border-borde bg-superficie p-4">
@@ -61,17 +99,36 @@ export default async function Home() {
           </p>
         </section>
 
+        {/* Puntos sin gastar: la llamada a especializarse */}
+        {resumen.puntosLibres > 0 && (
+          <Link
+            href="/arbol"
+            className="mt-3 flex items-center gap-2.5 rounded-xl border border-interior/40 bg-interior/[0.07] px-4 py-3"
+          >
+            <Sparkles className="size-4 shrink-0 text-interior" />
+            <span className="flex-1 text-sm">
+              Tienes <span className="font-semibold text-interior">{resumen.puntosLibres}</span>{' '}
+              {resumen.puntosLibres === 1 ? 'punto' : 'puntos'} de habilidad sin gastar
+            </span>
+            <span className="text-xs text-tenue">Abrir árbol</span>
+          </Link>
+        )}
+
         {/* 3. Categorias: el desequilibrio tiene que verse de un vistazo. */}
         <section className="mt-6">
-          <h2 className="mb-3 text-sm font-medium text-tenue">Categorias</h2>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-sm font-medium text-tenue">Categorias</h2>
+            <Link href="/arbol" className="text-xs text-tenue underline underline-offset-4">
+              Árbol de habilidades
+            </Link>
+          </div>
           <ul className="grid grid-cols-2 gap-2.5">
             {resumen.categorias.map((cat) => {
               const Icono = iconoDe(cat.icono);
               const acento = acentoDe(cat.esfera);
-              return (
-                <li
-                  key={cat.key}
-                  className={`rounded-xl border border-borde bg-superficie p-3 ${
+              const tarjeta = (
+                <div
+                  className={`h-full rounded-xl border border-borde bg-superficie p-3 ${
                     cat.activa ? '' : 'opacity-45'
                   }`}
                 >
@@ -88,6 +145,16 @@ export default async function Home() {
                   <div className="mt-2">
                     <BarraProgreso progreso={cat.progreso} acento={acento} />
                   </div>
+                </div>
+              );
+
+              return (
+                <li key={cat.key}>
+                  {keysConArbol.has(cat.key) ? (
+                    <Link href={`/arbol/${cat.key}`}>{tarjeta}</Link>
+                  ) : (
+                    tarjeta
+                  )}
                 </li>
               );
             })}
