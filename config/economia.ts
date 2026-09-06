@@ -77,6 +77,20 @@ export const ECONOMIA = {
   /** Puntos de habilidad otorgados por cada nivel de categoría ganado. */
   puntosPorNivel: 1,
 
+  nodos: {
+    /**
+     * Los puntos compran el DESBLOQUEO de un nodo; su nivel sube con la
+     * práctica, con la XP registrada en él. Tiene que ser así: la dificultad
+     * relativa baja al subir de nivel en la skill, de modo que si el nivel se
+     * comprase, estarías pagando puntos para ganar menos XP.
+     *
+     * Escalón triangular: el nivel n pide xpPorNivel · (n-1) · n / 2 de XP
+     * acumulada en ese nodo. Con 2.500: nivel 2 a las 2.500, nivel 3 a las
+     * 7.500, nivel 4 a las 15.000 y nivel 5 a las 25.000.
+     */
+    xpPorNivel: 2500,
+  },
+
   /** Días que deben pasar entre dos respec de la misma categoría. */
   diasEntreRespec: 90,
 
