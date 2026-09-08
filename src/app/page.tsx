@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { Flame, Medal, Plus, Snowflake, Sparkles } from 'lucide-react';
+import { Avatar } from '@/components/juego/Avatar';
 import { BarraProgreso } from '@/components/juego/BarraProgreso';
 import { TableroMisiones } from '@/components/juego/TableroMisiones';
 import { resumenHome, ultimosRegistros } from '@/lib/db/consultas';
 import { categoriasConArbol } from '@/lib/db/arbol';
+import { sincronizarClase } from '@/lib/db/clases';
 import { sincronizarLogros } from '@/lib/db/logros';
 import { sincronizarMisiones } from '@/lib/db/misiones';
 import { cofresSinAbrir } from '@/lib/db/recompensas';
@@ -22,6 +24,7 @@ export default async function Home() {
   const avisos = await sincronizarRachas();
   const misiones = await sincronizarMisiones();
   const logrosNuevos = await sincronizarLogros();
+  const { clase, esNueva } = await sincronizarClase();
 
   const [resumen, ultimos, conArbol, congeladores, cofres] = await Promise.all([
     resumenHome(),
@@ -38,12 +41,28 @@ export default async function Home() {
       <main className="mx-auto w-full max-w-md px-4 pb-32 pt-6">
         {/* 1. Identidad */}
         <header className="flex items-center gap-3">
-          <div className="grid size-12 shrink-0 place-items-center rounded-full border border-borde bg-superficie text-lg font-semibold">
-            {resumen.nombre.charAt(0).toUpperCase()}
-          </div>
+          <Link href="/evolucion" className="shrink-0" aria-label="Ver evolucion">
+            <Avatar
+              datos={{
+                nivelGlobal: global.nivel,
+                segmentos: resumen.categorias.map((c) => ({
+                  key: c.key,
+                  esfera: c.esfera,
+                  cuota: clase?.distribucion[c.key] ?? 0,
+                  nivel: c.nivel,
+                })),
+                esferaDominante:
+                  resumen.categorias.find((c) => c.key === clase?.dominantes[0])?.esfera ??
+                  'interior',
+                tipoClase: clase?.tipo ?? null,
+              }}
+              tamano={52}
+            />
+          </Link>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm text-tenue">
-              Sin clase todavia · nivel <span className="text-texto">{global.nivel}</span>
+              {clase?.nombre ?? 'Sin clase todavia'} · nivel{' '}
+              <span className="text-texto">{global.nivel}</span>
             </p>
             <h1 className="truncate text-xl font-semibold">{resumen.nombre}</h1>
           </div>
@@ -79,6 +98,20 @@ export default async function Home() {
               {avisos[0].congeladoresRestantes} este mes.
             </p>
           </div>
+        )}
+
+        {esNueva && clase && (
+          <Link
+            href="/evolucion"
+            className="mt-4 flex items-center gap-2.5 rounded-xl border border-interior/40 bg-interior/[0.07] px-4 py-3"
+          >
+            <Sparkles className="size-4 shrink-0 text-interior" />
+            <span className="flex-1 text-sm">
+              Empiezas un capitulo nuevo como{' '}
+              <span className="font-semibold text-interior">{clase.nombre}</span>
+            </span>
+            <span className="text-xs text-tenue">Ver</span>
+          </Link>
         )}
 
         {misiones.secretos.length > 0 && (
@@ -160,6 +193,9 @@ export default async function Home() {
               </Link>
               <Link href="/logros" className="text-xs text-tenue underline underline-offset-4">
                 Logros
+              </Link>
+              <Link href="/evolucion" className="text-xs text-tenue underline underline-offset-4">
+                Evolución
               </Link>
             </div>
           </div>
