@@ -69,6 +69,20 @@ export function TableroMisiones({
         </p>
       )}
 
+      {/* El jefe va primero: enmarca la semana entera y es lo que da cofre.
+          Al final del tablero quedaba a un scroll de distancia. */}
+      {semanal && (
+        <div className="mb-4">
+          <div className="mb-2 flex items-baseline justify-between">
+            <p className="text-xs font-medium text-amber-400">Jefe de la semana</p>
+            <p className="text-xs text-tenue">
+              {semanal.completada ? 'derrotado' : 'da cofre al completarlo'}
+            </p>
+          </div>
+          <Tarjeta mision={semanal} jefe />
+        </div>
+      )}
+
       {principal && <Tarjeta mision={principal} destacada />}
 
       {secundarias.length > 0 && (
@@ -92,13 +106,6 @@ export function TableroMisiones({
 
       {ocio && <div className="mt-3">{<Tarjeta mision={ocio} />}</div>}
       {sorpresa && <div className="mt-3">{<Tarjeta mision={sorpresa} sorpresa />}</div>}
-
-      {semanal && (
-        <div className="mt-4">
-          <p className="mb-2 text-xs text-tenue">Misión semanal</p>
-          <Tarjeta mision={semanal} jefe />
-        </div>
-      )}
 
       <AnimatePresence>
         {premio && (

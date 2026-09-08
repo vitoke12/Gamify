@@ -24,8 +24,13 @@ export type DefActividad = {
 
 export const ACTIVIDADES: DefActividad[] = [
   // ── Físico ────────────────────────────────────────────────────────────
-  { key: 'act-kite-sesion', categoria: 'fisico', nodo: 'kite-navegacion', nombre: 'Sesión de kitesurf', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 3, orden: 1 },
-  { key: 'act-kite-teoria', categoria: 'fisico', nodo: 'kite-seguridad', nombre: 'Teoría de kite (viento, seguridad)', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 2 },
+  { key: 'act-kite-sesion', categoria: 'fisico', nodo: 'kite-navegacion', nombre: 'Kite: navegar (sin saltos)', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 3, orden: 1 },
+  // Los tiers 4 existen en el árbol, así que necesitan actividad propia: si
+  // no, al dominar Navegación la dificultad relativa se quedaría clavada en
+  // 1,0 sin ningún escalón al que saltar.
+  { key: 'act-kite-freestyle', categoria: 'fisico', nodo: 'kite-freestyle', nombre: 'Kite: saltos y trucos nuevos', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 4, orden: 2 },
+  { key: 'act-kite-olas', categoria: 'fisico', nodo: 'kite-olas', nombre: 'Kite: olas o spot nuevo', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 4, orden: 3 },
+  { key: 'act-kite-teoria', categoria: 'fisico', nodo: 'kite-seguridad', nombre: 'Teoría de kite (viento, seguridad)', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 4 },
   { key: 'act-gimnasio', categoria: 'fisico', nodo: 'fue-progresion', nombre: 'Gimnasio', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 2, orden: 3 },
   { key: 'act-calistenia', categoria: 'fisico', nodo: 'fue-calistenia', nombre: 'Calistenia', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 2, orden: 4 },
   { key: 'act-correr', categoria: 'fisico', nodo: 'res-base-aerobica', nombre: 'Correr', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 5 },
