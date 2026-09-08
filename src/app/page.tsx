@@ -81,6 +81,18 @@ export default async function Home() {
           </div>
         )}
 
+        {misiones.secretos.length > 0 && (
+          <div className="mt-4 rounded-xl border border-purple-500/40 bg-purple-500/[0.08] px-4 py-3">
+            <div className="flex items-center gap-2 text-sm text-purple-300">
+              <Sparkles className="size-4 shrink-0" />
+              <span className="font-medium">La sorpresa traia un secreto</span>
+            </div>
+            <p className="mt-1 text-xs text-purple-200/80">
+              {misiones.secretos.join(', ')} · desbloqueado sin cumplir su condicion.
+            </p>
+          </div>
+        )}
+
         {logrosNuevos.length > 0 && (
           <Link
             href="/logros"

@@ -6,8 +6,10 @@
 import { LOGROS, type DefLogro } from '@config/logros';
 import { logrosNuevos, type EstadoParaLogros } from '@/lib/domain/logros';
 import { progresoDesdeXp } from '@/lib/domain/niveles';
+import { crearAleatorio } from '@/lib/domain/rng';
 import { PERFIL, prisma } from './prisma';
 import { xpPorCategoria } from './consultas';
+import { aJson } from './json';
 
 async function estadoDelPerfil(): Promise<EstadoParaLogros> {
   const [logs, rachaGlobal, nodos, misiones, xpKeys] = await Promise.all([
@@ -81,6 +83,30 @@ export async function sincronizarLogros(): Promise<DefLogro[]> {
   }
 
   return LOGROS.filter((l) => nuevos.includes(l.key));
+}
+
+/**
+ * Regala un logro secreto que aún no se tuviera. Es el premio del efecto
+ * sorpresa "logro-secreto": la única forma de conseguir uno sin cumplir su
+ * condición, y por eso solo puede salir de una misión sorpresa.
+ */
+export async function desbloquearSecretoAlAzar(semilla: string): Promise<DefLogro | null> {
+  const yaTiene = await prisma.userAchievement.findMany({
+    where: { profileId: PERFIL },
+    include: { achievement: { select: { key: true } } },
+  });
+  const keys = new Set(yaTiene.map((u) => u.achievement.key));
+  const candidatos = LOGROS.filter((l) => l.esSecreto && !keys.has(l.key));
+  if (candidatos.length === 0) return null;
+
+  const elegido = crearAleatorio(`secreto:${semilla}`).elegir(candidatos);
+  const fila = await prisma.achievement.findUnique({ where: { key: elegido.key } });
+  if (!fila) return null;
+
+  await prisma.userAchievement.create({
+    data: { achievementId: fila.id, profileId: PERFIL, contextoJson: aJson({ via: 'sorpresa' }) },
+  });
+  return elegido;
 }
 
 export type LogroVista = {

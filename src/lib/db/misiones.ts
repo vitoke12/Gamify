@@ -22,6 +22,7 @@ import { abrirCofre } from '@/lib/domain/cofres';
 import type { TipoMision } from '@/lib/domain/tipos';
 import { PERFIL, prisma } from './prisma';
 import { diaDeHoy, xpPorCategoria } from './consultas';
+import { desbloquearSecretoAlAzar } from './logros';
 import { aJson, deJson } from './json';
 
 /** Bonus fijo que paga el efecto sorpresa "bonus-fijo". */
@@ -46,6 +47,8 @@ export type ResultadoMisiones = {
   semanal: MisionVista | null;
   /** Las que se han completado en esta pasada: hay que celebrarlas. */
   reciencompletadas: MisionVista[];
+  /** Logros secretos regalados por el efecto sorpresa. */
+  secretos: string[];
 };
 
 type Payload = { objetivo: ObjetivoDef; efecto?: EfectoSorpresa };
@@ -145,6 +148,7 @@ export async function sincronizarMisiones(): Promise<ResultadoMisiones> {
   ]);
 
   const reciencompletadas: MisionVista[] = [];
+  const secretos: string[] = [];
 
   const evaluar = async (
     quest: (typeof delDia)[number],
@@ -176,6 +180,13 @@ export async function sincronizarMisiones(): Promise<ResultadoMisiones> {
           },
         });
       });
+
+      // El tercer efecto sorpresa regala un secreto: es la unica via de
+      // conseguir uno sin cumplir su condicion.
+      if (payload.efecto === 'logro-secreto') {
+        const regalado = await desbloquearSecretoAlAzar(quest.id);
+        if (regalado) secretos.push(regalado.nombre);
+      }
 
       if (quest.tipo === 'semanal') {
         const recompensa = abrirCofre(quest.id);
@@ -225,7 +236,7 @@ export async function sincronizarMisiones(): Promise<ResultadoMisiones> {
   for (const quest of delDia) tablero.push(await evaluar(quest, registrosHoy));
   const semanalVista = laSemanal ? await evaluar(laSemanal, registrosSemana) : null;
 
-  return { tablero, semanal: semanalVista, reciencompletadas };
+  return { tablero, semanal: semanalVista, reciencompletadas, secretos };
 }
 
 function xpFinal(base: number, efecto?: EfectoSorpresa): number {
