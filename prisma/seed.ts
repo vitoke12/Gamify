@@ -9,6 +9,7 @@ import { ACTIVIDADES } from '../config/actividades';
 import { ARBOLES } from '../config/arboles';
 import { CATEGORIAS, ESFERAS } from '../config/categorias';
 import { ECONOMIA } from '../config/economia';
+import { LOGROS } from '../config/logros';
 import { validarConfig } from '../config/esquemas';
 
 const prisma = new PrismaClient({
@@ -131,6 +132,24 @@ async function main() {
     });
   }
 
+  // ── Logros ──────────────────────────────────────────────────────────────
+  // La condicion vive en /config; aqui solo se guarda el catalogo para poder
+  // enlazar los desbloqueos y pintarlos.
+  for (const logro of LOGROS) {
+    const datos = {
+      nombre: logro.nombre,
+      descripcion: logro.descripcion,
+      esSecreto: logro.esSecreto,
+      condicionKey: logro.key,
+      orden: logro.orden,
+    };
+    await prisma.achievement.upsert({
+      where: { key: logro.key },
+      update: datos,
+      create: { key: logro.key, ...datos },
+    });
+  }
+
   // ── Rachas (global + una por categoria registrable) ─────────────────────
   const mesActual = new Date().toISOString().slice(0, 7);
   const claves: { clave: string; categoryId: string | null }[] = [
@@ -153,14 +172,15 @@ async function main() {
     });
   }
 
-  const [categorias, ramas, nodos, actividades] = await Promise.all([
+  const [categorias, ramas, nodos, actividades, logros] = await Promise.all([
     prisma.category.count(),
     prisma.skillBranch.count(),
     prisma.skillNode.count(),
     prisma.activity.count(),
+    prisma.achievement.count(),
   ]);
   console.log(
-    `Seed listo: ${categorias} categorias, ${ramas} ramas, ${nodos} nodos, ${actividades} actividades.`,
+    `Seed listo: ${categorias} categorias, ${ramas} ramas, ${nodos} nodos, ${actividades} actividades, ${logros} logros.`,
   );
 }
 

@@ -9,6 +9,8 @@ import { z } from 'zod';
 import { ACTIVIDADES } from './actividades';
 import { ARBOLES } from './arboles';
 import { CATEGORIAS } from './categorias';
+import { LOGROS } from './logros';
+import { MISIONES } from './misiones';
 
 const esferaSchema = z.enum(['interior', 'expresion', 'base']);
 const unidadSchema = z.enum(['minutos', 'repeticiones', 'paginas']);
@@ -144,6 +146,49 @@ export function validarConfig(): ProblemaConfig[] {
   for (const cat of CATEGORIAS.filter((c) => c.activa)) {
     if (!ACTIVIDADES.some((a) => a.categoria === cat.key)) {
       problemas.push(`categorias: "${cat.key}" esta activa pero no tiene actividades`);
+    }
+  }
+
+  // Misiones: una que apunte a una actividad inexistente no se completaria
+  // jamas, y el fallo seria invisible.
+  const keysMision = new Set<string>();
+  for (const m of MISIONES) {
+    if (keysMision.has(m.key)) problemas.push(`misiones: key duplicada "${m.key}"`);
+    keysMision.add(m.key);
+    if (!keysCategoria.has(m.categoria)) {
+      problemas.push(`misiones: "${m.key}" apunta a la categoria inexistente "${m.categoria}"`);
+    }
+    if ('actividad' in m.objetivo && !keysActividad.has(m.objetivo.actividad)) {
+      problemas.push(
+        `misiones: "${m.key}" apunta a la actividad inexistente "${m.objetivo.actividad}"`,
+      );
+    }
+    if ('categoria' in m.objetivo && !keysCategoria.has(m.objetivo.categoria)) {
+      problemas.push(
+        `misiones: "${m.key}" apunta a la categoria inexistente "${m.objetivo.categoria}"`,
+      );
+    }
+  }
+  for (const tipo of ['principal', 'secundaria', 'ocio', 'sorpresa', 'semanal'] as const) {
+    if (!MISIONES.some((m) => m.tipo === tipo)) {
+      problemas.push(`misiones: no hay ninguna de tipo "${tipo}"`);
+    }
+  }
+
+  const keysLogro = new Set<string>();
+  for (const l of LOGROS) {
+    if (keysLogro.has(l.key)) problemas.push(`logros: key duplicada "${l.key}"`);
+    keysLogro.add(l.key);
+    const categorias =
+      l.condicion.tipo === 'nivelCategoria'
+        ? [l.condicion.categoria]
+        : l.condicion.tipo === 'nivelEnVarias'
+          ? l.condicion.categorias
+          : [];
+    for (const c of categorias) {
+      if (!keysCategoria.has(c)) {
+        problemas.push(`logros: "${l.key}" apunta a la categoria inexistente "${c}"`);
+      }
     }
   }
 
