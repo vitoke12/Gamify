@@ -75,6 +75,7 @@ export function recalcularDia(
       esCategoriaDescuidada: contexto.categoriaDescuidada === categoriaId,
       ocurrenciaEnElDia,
       clase: contexto.clase,
+      multiplicadorCofre: contexto.multiplicadorCofre,
     });
 
     const xpBase = actividad.xpBasePorMinuto * duracionMin;

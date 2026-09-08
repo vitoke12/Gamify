@@ -210,6 +210,18 @@ describe('tope al producto de modificadores', () => {
   });
 });
 
+describe('multiplicador de cofre', () => {
+  it('se aplica a los registros mientras dura', () => {
+    const a = actividad('gym');
+    const logs = recalcularDia(
+      [entrada('l1', 'gym', 9, 60)],
+      contexto([a], { multiplicadorCofre: 1.5 }),
+    );
+    expect(logs[0].modificadores.cofre).toBe(1.5);
+    expect(logs[0].xpCalculado).toBe(270); // 180 x 1,5
+  });
+});
+
 describe('reproducibilidad', () => {
   it('el resultado no depende del orden en que lleguen las entradas', () => {
     const acts = [actividad('gym'), actividad('leer', { categoriaId: 'mental' })];

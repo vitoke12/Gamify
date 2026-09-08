@@ -57,6 +57,8 @@ export type ContextoCalculo = {
   categoriaDescuidada: string | null;
   /** Pasiva de clase (fase 4). Ausente = sin clase todavia. */
   clase?: { dominante: string | null; descuidada: string | null };
+  /** Multiplicador temporal salido de un cofre, si hay uno vigente. */
+  multiplicadorCofre?: number;
   horaCorteDia: number;
 };
 

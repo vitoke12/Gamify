@@ -39,6 +39,8 @@ export type SituacionRegistro = {
   /** 0 = primera sesion de esa actividad hoy, 1 = segunda, etc. */
   ocurrenciaEnElDia: number;
   clase?: { dominante: string | null; descuidada: string | null };
+  /** Multiplicador temporal de un cofre, si hay uno vigente. */
+  multiplicadorCofre?: number;
 };
 
 export type Modificadores = {
@@ -68,6 +70,12 @@ export function calcularModificadores(s: SituacionRegistro): Modificadores {
   if (s.clase) {
     if (s.clase.dominante === s.categoriaId) detalle.claseDominante = M.claseDominante;
     if (s.clase.descuidada === s.categoriaId) detalle.claseDescuidada = M.claseDescuidada;
+  }
+
+  // El premio del cofre entra como un modificador mas, y por tanto tambien
+  // se lo come el tope: un cofre afortunado no puede romper la economia.
+  if (s.multiplicadorCofre && s.multiplicadorCofre > 1) {
+    detalle.cofre = s.multiplicadorCofre;
   }
 
   const producto = Object.values(detalle).reduce((acc, v) => acc * v, 1);

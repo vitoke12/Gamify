@@ -70,6 +70,21 @@ describe('calcularModificadores', () => {
       .toEqual({ claseDominante: 1.1 });
   });
 
+  it('mete el premio del cofre como un modificador mas', () => {
+    expect(calcularModificadores(situacion({ multiplicadorCofre: 1.3 })).detalle).toEqual({
+      cofre: 1.3,
+    });
+    // Un cofre de x1 no ensucia el desglose con un factor que no hace nada.
+    expect(calcularModificadores(situacion({ multiplicadorCofre: 1 })).detalle).toEqual({});
+  });
+
+  it('el cofre tampoco se salta el tope', () => {
+    const m = calcularModificadores(
+      situacion({ diasRacha: 60, esPrimeraVez: true, haySinergia: true, multiplicadorCofre: 1.5 }),
+    );
+    expect(m.productoTopado).toBe(4);
+  });
+
   it('topa el producto en 4.0 en el peor caso legal', () => {
     const m = calcularModificadores(
       situacion({
