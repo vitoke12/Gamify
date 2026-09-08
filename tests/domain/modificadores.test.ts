@@ -64,10 +64,24 @@ describe('calcularModificadores', () => {
 
   it('aplica la pasiva de clase solo a la categoria que toca', () => {
     const clase = { dominante: 'mental', descuidada: 'fisico' };
-    const m = calcularModificadores(situacion({ clase }));
-    expect(m.detalle).toEqual({ claseDescuidada: 1.25 });
-    expect(calcularModificadores(situacion({ categoriaId: 'mental', clase })).detalle)
-      .toEqual({ claseDominante: 1.1 });
+    expect(calcularModificadores(situacion({ clase })).detalle).toEqual({
+      categoriaDescuidada: 1.25,
+    });
+    expect(calcularModificadores(situacion({ categoriaId: 'mental', clase })).detalle).toEqual({
+      claseDominante: 1.1,
+    });
+  });
+
+  it('la pasiva de la descuidada no se apila con la regla base', () => {
+    // Son el mismo disparador: dos veces x1,25 seria x1,56 por una sola razon.
+    const m = calcularModificadores(
+      situacion({
+        esCategoriaDescuidada: true,
+        clase: { dominante: 'mental', descuidada: 'fisico' },
+      }),
+    );
+    expect(m.detalle).toEqual({ categoriaDescuidada: 1.25 });
+    expect(m.producto).toBe(1.25);
   });
 
   it('mete el premio del cofre como un modificador mas', () => {
@@ -93,10 +107,10 @@ describe('calcularModificadores', () => {
         haySinergia: true,
         tieneEvidencia: true,
         esCategoriaDescuidada: true,
-        clase: { dominante: null, descuidada: 'fisico' },
+        clase: { dominante: 'fisico', descuidada: null },
       }),
     );
-    expect(m.producto).toBeCloseTo(6.47, 2);
+    expect(m.producto).toBeCloseTo(5.69, 2);
     expect(m.productoTopado).toBe(4);
     expect(m.topeAplicado).toBe(true);
   });

@@ -62,15 +62,19 @@ export function calcularModificadores(s: SituacionRegistro): Modificadores {
   if (s.esPrimeraVez) detalle.primeraVez = M.primeraVez;
   if (s.haySinergia) detalle.sinergia = M.sinergia;
   if (s.tieneEvidencia) detalle.evidencia = M.evidencia;
-  if (s.esCategoriaDescuidada) detalle.categoriaDescuidada = M.categoriaDescuidada;
+
+  // La regla base de "categoria descuidada" y la pasiva de clase sobre la mas
+  // descuidada son el MISMO disparador. Multiplicarlas daria x1,56 por una
+  // sola razon, asi que se aplica una vez, con el valor mayor de las dos.
+  const esDescuidada = s.esCategoriaDescuidada || s.clase?.descuidada === s.categoriaId;
+  if (esDescuidada) {
+    detalle.categoriaDescuidada = Math.max(M.categoriaDescuidada, M.claseDescuidada);
+  }
 
   const repeticion = multiplicadorRepeticion(s.ocurrenciaEnElDia);
   if (repeticion !== 1) detalle.repeticion = repeticion;
 
-  if (s.clase) {
-    if (s.clase.dominante === s.categoriaId) detalle.claseDominante = M.claseDominante;
-    if (s.clase.descuidada === s.categoriaId) detalle.claseDescuidada = M.claseDescuidada;
-  }
+  if (s.clase?.dominante === s.categoriaId) detalle.claseDominante = M.claseDominante;
 
   // El premio del cofre entra como un modificador mas, y por tanto tambien
   // se lo come el tope: un cofre afortunado no puede romper la economia.
