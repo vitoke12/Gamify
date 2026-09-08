@@ -1,8 +1,12 @@
 import Link from 'next/link';
-import { Flame, Plus, Snowflake, Sparkles } from 'lucide-react';
+import { Flame, Medal, Plus, Snowflake, Sparkles } from 'lucide-react';
 import { BarraProgreso } from '@/components/juego/BarraProgreso';
+import { TableroMisiones } from '@/components/juego/TableroMisiones';
 import { resumenHome, ultimosRegistros } from '@/lib/db/consultas';
 import { categoriasConArbol } from '@/lib/db/arbol';
+import { sincronizarLogros } from '@/lib/db/logros';
+import { sincronizarMisiones } from '@/lib/db/misiones';
+import { cofresSinAbrir } from '@/lib/db/recompensas';
 import { congeladoresGlobales, sincronizarRachas } from '@/lib/db/rachas';
 import { fraseDeContexto } from '@/lib/domain/perfil';
 import { acentoDe, formatearXp, iconoDe } from '@/lib/ui/esferas';
@@ -13,13 +17,18 @@ export const dynamic = 'force-dynamic';
 export default async function Home() {
   // Antes de leer nada: poner las rachas al día. Es idempotente y no necesita
   // cron; los congeladores que se hayan gastado vuelven como avisos.
+  // El orden importa: las rachas alimentan la categoria que manda en la
+  // mision principal, y las misiones completadas alimentan los logros.
   const avisos = await sincronizarRachas();
+  const misiones = await sincronizarMisiones();
+  const logrosNuevos = await sincronizarLogros();
 
-  const [resumen, ultimos, conArbol, congeladores] = await Promise.all([
+  const [resumen, ultimos, conArbol, congeladores, cofres] = await Promise.all([
     resumenHome(),
     ultimosRegistros(4),
     categoriasConArbol(),
     congeladoresGlobales(),
+    cofresSinAbrir(),
   ]);
   const { global, racha } = resumen;
   const keysConArbol = new Set(conArbol.map((c) => c.key));
@@ -72,6 +81,21 @@ export default async function Home() {
           </div>
         )}
 
+        {logrosNuevos.length > 0 && (
+          <Link
+            href="/logros"
+            className="mt-4 flex items-center gap-2.5 rounded-xl border border-amber-500/40 bg-amber-500/[0.07] px-4 py-3"
+          >
+            <Medal className="size-4 shrink-0 text-amber-400" />
+            <span className="flex-1 text-sm">
+              {logrosNuevos.length === 1
+                ? `Logro nuevo: ${logrosNuevos[0].nombre}`
+                : `${logrosNuevos.length} logros nuevos`}
+            </span>
+            <span className="text-xs text-tenue">Ver</span>
+          </Link>
+        )}
+
         {racha.enRiesgo && avisos.length === 0 && (
           <p className="mt-4 rounded-xl border border-amber-800/60 bg-amber-950/25 px-4 py-3 text-xs text-amber-200/85">
             Hoy no has registrado nada todavia. Tu racha de {racha.diasActuales} dias aguanta
@@ -118,9 +142,14 @@ export default async function Home() {
         <section className="mt-6">
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="text-sm font-medium text-tenue">Categorias</h2>
-            <Link href="/arbol" className="text-xs text-tenue underline underline-offset-4">
-              Árbol de habilidades
-            </Link>
+            <div className="flex gap-3">
+              <Link href="/arbol" className="text-xs text-tenue underline underline-offset-4">
+                Árbol
+              </Link>
+              <Link href="/logros" className="text-xs text-tenue underline underline-offset-4">
+                Logros
+              </Link>
+            </div>
           </div>
           <ul className="grid grid-cols-2 gap-2.5">
             {resumen.categorias.map((cat) => {
@@ -164,7 +193,10 @@ export default async function Home() {
           </p>
         </section>
 
-        {/* 4. Ultimos registros. El tablero de misiones entra en la fase 3. */}
+        {/* 4. Tablero de misiones */}
+        <TableroMisiones tablero={misiones.tablero} semanal={misiones.semanal} cofres={cofres} />
+
+        {/* 5. Ultimos registros */}
         {ultimos.length > 0 && (
           <section className="mt-6">
             <h2 className="mb-3 text-sm font-medium text-tenue">Ultimo registrado</h2>
@@ -191,7 +223,7 @@ export default async function Home() {
         )}
       </main>
 
-      {/* 5. Registro rapido, siempre a un pulgar de distancia. */}
+      {/* 6. Registro rapido, siempre a un pulgar de distancia. */}
       <Link
         href="/registrar"
         className="fixed inset-x-0 bottom-6 z-10 mx-auto flex w-[calc(100%-2rem)] max-w-md items-center justify-center gap-2 rounded-full bg-interior py-4 font-semibold text-fondo shadow-lg shadow-black/40 active:scale-[0.98] transition-transform"

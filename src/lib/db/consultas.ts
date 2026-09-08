@@ -9,6 +9,7 @@ import { progresoDesdeXp } from '@/lib/domain/niveles';
 import { calcularRacha } from '@/lib/domain/rachas';
 import type { Actividad, ContextoCalculo, Unidad } from '@/lib/domain/tipos';
 import { PERFIL, prisma } from './prisma';
+import { multiplicadorDeCofre } from './recompensas';
 
 export async function horaCorte(): Promise<number> {
   const perfil = await prisma.profile.findUnique({ where: { id: PERFIL } });
@@ -154,6 +155,7 @@ export async function contextoDelDia(dia: string): Promise<ContextoCalculo> {
     actividadesYaVistas: new Set(vistas.map((v) => v.activityId)),
     diasRachaPorCategoria,
     categoriaDescuidada: descuidadaKey ? (idPorKey.get(descuidadaKey) ?? null) : null,
+    multiplicadorCofre: await multiplicadorDeCofre(),
     horaCorteDia: perfil?.horaCorteDia ?? 5,
     // clase: pendiente de la fase 4. Sin ella no hay pasiva y esta bien:
     // no se puede tener clase antes de haber jugado.
