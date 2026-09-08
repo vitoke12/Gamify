@@ -4,6 +4,7 @@
  * importa Prisma, por eso sus tests corren sin levantar nada.
  */
 import { diaLogico, diferenciaDias, sumarDias } from '@/lib/domain/dia';
+import { calcularClase } from '@/lib/domain/clases';
 import { categoriaMasDescuidada, estadoDeCategorias } from '@/lib/domain/perfil';
 import { progresoDesdeXp } from '@/lib/domain/niveles';
 import { calcularRacha } from '@/lib/domain/rachas';
@@ -148,6 +149,15 @@ export async function contextoDelDia(dia: string): Promise<ContextoCalculo> {
   );
   const idPorKey = new Map(categorias.map((c) => [c.key, c.id]));
 
+  const nivelesPrevios: Record<string, number> = {};
+  for (const [key, xp] of Object.entries(xpKeys)) {
+    nivelesPrevios[key] = progresoDesdeXp(xp).nivel;
+  }
+  const claseDelDia = calcularClase(
+    nivelesPrevios,
+    categorias.map((c) => c.key),
+  );
+
   return {
     actividades,
     topeDiarioPorCategoria,
@@ -155,10 +165,20 @@ export async function contextoDelDia(dia: string): Promise<ContextoCalculo> {
     actividadesYaVistas: new Set(vistas.map((v) => v.activityId)),
     diasRachaPorCategoria,
     categoriaDescuidada: descuidadaKey ? (idPorKey.get(descuidadaKey) ?? null) : null,
+    // La clase se congela igual que la categoria descuidada: con el estado
+    // con el que se entra al dia, para que la XP ya concedida no cambie.
+    clase: claseDelDia
+      ? {
+          dominante: claseDelDia.pasiva.dominante
+            ? (idPorKey.get(claseDelDia.pasiva.dominante) ?? null)
+            : null,
+          descuidada: claseDelDia.pasiva.descuidada
+            ? (idPorKey.get(claseDelDia.pasiva.descuidada) ?? null)
+            : null,
+        }
+      : undefined,
     multiplicadorCofre: await multiplicadorDeCofre(),
     horaCorteDia: perfil?.horaCorteDia ?? 5,
-    // clase: pendiente de la fase 4. Sin ella no hay pasiva y esta bien:
-    // no se puede tener clase antes de haber jugado.
   };
 }
 
