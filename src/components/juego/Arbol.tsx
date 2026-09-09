@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { Check, ChevronLeft, Lock, RotateCcw, Sparkles } from 'lucide-react';
 import { BarraProgreso } from '@/components/juego/BarraProgreso';
+import { Constelacion } from '@/components/juego/Constelacion';
 import { desbloquearNodo, respecCategoria, verificarMaestria } from '@/lib/actions/arbol';
 import type { ArbolVista, NodoVista } from '@/lib/db/arbol';
 import { acentoDe, formatearXp } from '@/lib/ui/esferas';
@@ -15,11 +16,13 @@ export function Arbol({ arbol, pestanas }: { arbol: ArbolVista; pestanas: Pestan
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
   const [ramaActiva, setRamaActiva] = useState(arbol.ramas[0]?.key ?? '');
+  const [nodoActivo, setNodoActivo] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<{ texto: string; error: boolean } | null>(null);
   const [confirmandoRespec, setConfirmandoRespec] = useState(false);
 
   const acento = acentoDe(arbol.categoria.esfera);
   const rama = arbol.ramas.find((r) => r.key === ramaActiva) ?? arbol.ramas[0];
+  const seleccionado = rama?.nodos.find((n) => n.id === nodoActivo) ?? null;
 
   function ejecutar(accion: () => Promise<{ ok: boolean; mensaje?: string; error?: string }>) {
     iniciar(async () => {
@@ -82,7 +85,10 @@ export function Arbol({ arbol, pestanas }: { arbol: ArbolVista; pestanas: Pestan
           <button
             key={r.key}
             type="button"
-            onClick={() => setRamaActiva(r.key)}
+            onClick={() => {
+              setRamaActiva(r.key);
+              setNodoActivo(null);
+            }}
             className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
               r.key === rama?.key ? 'text-texto' : 'border-borde text-tenue'
             }`}
@@ -105,20 +111,34 @@ export function Arbol({ arbol, pestanas }: { arbol: ArbolVista; pestanas: Pestan
         </p>
       )}
 
-      {rama?.descripcion && <p className="mt-4 text-sm text-tenue">{rama.descripcion}</p>}
-
-      <ul className="mt-4 space-y-2.5">
-        {rama?.nodos.map((nodo) => (
-          <TarjetaNodo
-            key={nodo.id}
-            nodo={nodo}
+      {rama && (
+        <div className="mt-4">
+          <Constelacion
+            rama={rama}
             acento={acento}
-            pendiente={pendiente}
-            onDesbloquear={() => ejecutar(() => desbloquearNodo(nodo.id))}
-            onVerificar={(evidencia) => ejecutar(() => verificarMaestria(nodo.id, evidencia))}
+            seleccionado={nodoActivo}
+            onSeleccionar={(id) => setNodoActivo(id === nodoActivo ? null : id)}
           />
-        ))}
-      </ul>
+        </div>
+      )}
+
+      {seleccionado ? (
+        <Detalle
+          nodo={seleccionado}
+          acento={acento}
+          pendiente={pendiente}
+          onDesbloquear={() => ejecutar(() => desbloquearNodo(seleccionado.id))}
+          onVerificar={(evidencia) =>
+            ejecutar(() => verificarMaestria(seleccionado.id, evidencia))
+          }
+        />
+      ) : (
+        <p className="mt-4 rounded-xl border border-dashed border-borde px-4 py-5 text-center text-xs text-tenue">
+          Toca una estrella para ver qué es y qué cuesta.
+        </p>
+      )}
+
+      <Leyenda acento={acento} />
 
       {/* Respec: quita el miedo a elegir mal, no invita a reoptimizar cada semana */}
       <section className="mt-8 rounded-2xl border border-borde bg-superficie p-4">
@@ -143,6 +163,7 @@ export function Arbol({ arbol, pestanas }: { arbol: ArbolVista; pestanas: Pestan
               disabled={pendiente}
               onClick={() => {
                 setConfirmandoRespec(false);
+                setNodoActivo(null);
                 ejecutar(() => respecCategoria(arbol.categoria.key));
               }}
               className="flex-1 rounded-lg border border-red-800 bg-red-950/40 py-2.5 text-sm text-red-300"
@@ -171,7 +192,33 @@ export function Arbol({ arbol, pestanas }: { arbol: ArbolVista; pestanas: Pestan
   );
 }
 
-function TarjetaNodo({
+function Leyenda({ acento }: { acento: string }) {
+  const entradas = [
+    { color: '#34d399', relleno: true, texto: 'dominado' },
+    { color: acento, relleno: true, texto: 'en progreso' },
+    { color: acento, relleno: false, texto: 'disponible' },
+    { color: '#3c4a5a', relleno: false, texto: 'bloqueado' },
+    { color: '#fbbf24', relleno: true, texto: 'maestría' },
+  ];
+  return (
+    <ul className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
+      {entradas.map((e) => (
+        <li key={e.texto} className="flex items-center gap-1.5 text-[11px] text-tenue">
+          <span
+            className="size-2.5 rounded-full border"
+            style={{
+              borderColor: e.color,
+              backgroundColor: e.relleno ? e.color : 'transparent',
+            }}
+          />
+          {e.texto}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Detalle({
   nodo,
   acento,
   pendiente,
@@ -186,24 +233,17 @@ function TarjetaNodo({
 }) {
   const [evidencia, setEvidencia] = useState('');
   const [abriendoReto, setAbriendoReto] = useState(false);
-
-  // Cuatro estados que se distinguen sin leer una palabra.
-  const estilos: Record<string, string> = {
-    dominado: 'border-emerald-500/50 bg-emerald-500/[0.06]',
-    'en-progreso': 'bg-superficie',
-    disponible: 'border-borde bg-superficie',
-    bloqueado: 'border-dashed border-borde bg-superficie/40 opacity-60',
-  };
   const esMaestriaPendiente = nodo.esMaestria && nodo.estado !== 'dominado';
 
   return (
-    <li
-      className={`rounded-xl border p-4 ${
-        esMaestriaPendiente ? 'border-amber-500/50 bg-amber-500/[0.06]' : estilos[nodo.estado]
+    <section
+      className={`mt-4 rounded-xl border p-4 ${
+        nodo.estado === 'dominado'
+          ? 'border-emerald-500/50 bg-emerald-500/[0.06]'
+          : esMaestriaPendiente
+            ? 'border-amber-500/50 bg-amber-500/[0.06]'
+            : 'border-borde bg-superficie'
       }`}
-      style={
-        nodo.estado === 'en-progreso' && !nodo.esMaestria ? { borderColor: acento } : undefined
-      }
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -215,9 +255,7 @@ function TarjetaNodo({
             {esMaestriaPendiente && <Sparkles className="size-4 shrink-0 text-amber-400" />}
             <h3 className="truncate font-medium">{nodo.nombre}</h3>
           </div>
-          {nodo.descripcion && (
-            <p className="mt-1 text-xs text-tenue">{nodo.descripcion}</p>
-          )}
+          {nodo.descripcion && <p className="mt-1 text-xs text-tenue">{nodo.descripcion}</p>}
         </div>
         <span className="shrink-0 rounded border border-borde px-1.5 py-0.5 text-[10px] text-tenue">
           T{nodo.tier}
@@ -235,6 +273,9 @@ function TarjetaNodo({
           <div className="mt-2">
             <BarraProgreso progreso={nodo.progreso} acento={acento} />
           </div>
+          <p className="mt-2 text-[11px] text-tenue">
+            El nivel de un nodo no se compra: sube practicándolo.
+          </p>
         </div>
       )}
 
@@ -244,7 +285,6 @@ function TarjetaNodo({
         </p>
       )}
 
-      {/* Un nodo bloqueado nunca se esconde: enseña justo lo que le falta. */}
       {nodo.estado === 'bloqueado' && (
         <p className="mt-3 text-xs text-tenue">
           {nodo.faltan.length > 0 ? `Necesitas: ${nodo.faltan.join(', ')}` : 'Bloqueado'}
@@ -257,7 +297,10 @@ function TarjetaNodo({
           disabled={!nodo.comprable || pendiente}
           onClick={onDesbloquear}
           className="mt-3 w-full rounded-lg border py-2.5 text-sm font-medium transition-colors disabled:opacity-45"
-          style={{ borderColor: nodo.comprable ? acento : undefined, color: nodo.comprable ? acento : undefined }}
+          style={{
+            borderColor: nodo.comprable ? acento : undefined,
+            color: nodo.comprable ? acento : undefined,
+          }}
         >
           {nodo.comprable
             ? `Desbloquear · ${nodo.costePuntos} pts`
@@ -312,6 +355,6 @@ function TarjetaNodo({
           )}
         </div>
       )}
-    </li>
+    </section>
   );
 }

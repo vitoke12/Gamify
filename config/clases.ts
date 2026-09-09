@@ -25,6 +25,7 @@ export const CLASES: DefClase[] = [
   { key: 'explorador', nombre: 'Explorador', tipo: 'pura', categorias: ['aventura'], descripcion: 'La zona de confort queda lejos.' },
   { key: 'asceta', nombre: 'Asceta', tipo: 'pura', categorias: ['habitos'], descripcion: 'La disciplina como forma de vida.' },
   { key: 'mercader', nombre: 'Mercader', tipo: 'pura', categorias: ['financiero'], descripcion: 'Libertad medida en números.' },
+  { key: 'monje-relajado', nombre: 'Monje Relajado', tipo: 'pura', categorias: ['ocio'], descripcion: 'Descansar a conciencia también es una práctica.' },
 
   // ── Híbridas: dos suman más del 55% sin que ninguna llegue al 35% ─────
   { key: 'guerrero-monje', nombre: 'Guerrero-monje', tipo: 'hibrida', categorias: ['fisico', 'mental'], descripcion: 'Cuerpo y cabeza entrenados a la vez.' },

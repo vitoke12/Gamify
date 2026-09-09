@@ -39,6 +39,7 @@ describe('clases puras', () => {
     expect(calcularClase(niveles({ mental: 10, fisico: 2 }), TODAS)?.key).toBe('erudito');
     expect(calcularClase(niveles({ habitos: 10, fisico: 2 }), TODAS)?.key).toBe('asceta');
     expect(calcularClase(niveles({ financiero: 10, fisico: 2 }), TODAS)?.key).toBe('mercader');
+    expect(calcularClase(niveles({ ocio: 10, fisico: 2 }), TODAS)?.key).toBe('monje-relajado');
   });
 
   it('justo en el 35% todavia no basta', () => {
