@@ -13,7 +13,8 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "dev:lan": "next dev -H 0.0.0.0",
-    "start:lan": "next start -H 0.0.0.0"
+    "start:lan": "next start -H 0.0.0.0",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
