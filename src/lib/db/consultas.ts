@@ -5,7 +5,7 @@
  */
 import { diaLogico, diferenciaDias, sumarDias } from '@/lib/domain/dia';
 import { calcularClase } from '@/lib/domain/clases';
-import { categoriaMasDescuidada, estadoDeCategorias } from '@/lib/domain/perfil';
+import { cuotasRelativas, estadoDeCategorias } from '@/lib/domain/perfil';
 import { progresoDesdeXp } from '@/lib/domain/niveles';
 import { calcularRacha } from '@/lib/domain/rachas';
 import type { Actividad, ContextoCalculo, Unidad } from '@/lib/domain/tipos';
@@ -143,11 +143,16 @@ export async function contextoDelDia(dia: string): Promise<ContextoCalculo> {
   // ya otorgado solo puede subir (por sinergia), nunca menguar.
   const xpKeys = await xpPorCategoria(dia);
   const activas = categorias.filter((c) => c.activa);
-  const descuidadaKey = categoriaMasDescuidada(
+  const cuotasPorKey = cuotasRelativas(
     xpKeys,
     activas.map((c) => c.key),
   );
   const idPorKey = new Map(categorias.map((c) => [c.key, c.id]));
+  const cuotaRelativaPorCategoria: Record<string, number> = {};
+  for (const [key, cuota] of Object.entries(cuotasPorKey)) {
+    const id = idPorKey.get(key);
+    if (id) cuotaRelativaPorCategoria[id] = cuota;
+  }
 
   const nivelesPrevios: Record<string, number> = {};
   for (const [key, xp] of Object.entries(xpKeys)) {
@@ -164,7 +169,7 @@ export async function contextoDelDia(dia: string): Promise<ContextoCalculo> {
     nivelPorNodo,
     actividadesYaVistas: new Set(vistas.map((v) => v.activityId)),
     diasRachaPorCategoria,
-    categoriaDescuidada: descuidadaKey ? (idPorKey.get(descuidadaKey) ?? null) : null,
+    cuotaRelativaPorCategoria,
     // La clase se congela igual que la categoria descuidada: con el estado
     // con el que se entra al dia, para que la XP ya concedida no cambie.
     clase: claseDelDia

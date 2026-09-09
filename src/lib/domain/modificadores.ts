@@ -21,6 +21,37 @@ export function multiplicadorRacha(diasConsecutivos: number): number {
   return mult;
 }
 
+/**
+ * Sinergia: escala con cuantas categorias distintas has tocado hoy. Con diez
+ * categorias vivas, pagar igual por dos que por cinco dejaba la amplitud sin
+ * recompensa a partir de la segunda.
+ */
+export function multiplicadorSinergia(categoriasDelDia: number): number {
+  let mult = 1;
+  for (const escalon of M.escalaSinergia) {
+    if (categoriasDelDia >= escalon.categorias) mult = escalon.mult;
+  }
+  return mult;
+}
+
+/**
+ * Empuje hacia lo que llevas flojo, graduado.
+ *
+ * `cuotaRelativa` es la XP de la categoria dividida entre la media de todas:
+ * 1 es ir justo en la media, 0 es no haberla tocado nunca. Por encima de la
+ * mitad de la media no hay empuje; por debajo, crece hasta el maximo.
+ *
+ * Antes esto lo cobraba solo LA categoria mas descuidada. Con diez vivas eso
+ * dejaba a nueve sin ningun empuje, y la unica que lo recibia cambiaba de
+ * dueña cada semana.
+ */
+export function multiplicadorEquilibrio(cuotaRelativa: number): number {
+  const { umbralCuota, maximo } = M.equilibrio;
+  if (!Number.isFinite(cuotaRelativa) || cuotaRelativa >= umbralCuota) return 1;
+  const cuanto = (umbralCuota - Math.max(0, cuotaRelativa)) / umbralCuota;
+  return redondear2(1 + (maximo - 1) * cuanto);
+}
+
 /** Decaimiento por repetir la misma actividad el mismo dia (indice 0 = 1a vez). */
 export function multiplicadorRepeticion(ocurrenciaEnElDia: number): number {
   const tabla = M.decaimientoRepeticion;
@@ -32,10 +63,11 @@ export type SituacionRegistro = {
   diasRacha: number;
   /** Primera vez que se registra esta actividad, nunca antes. */
   esPrimeraVez: boolean;
-  /** Otra categoria distinta registrada el mismo dia logico. */
-  haySinergia: boolean;
+  /** Cuantas categorias distintas se han tocado ese dia logico. */
+  categoriasDelDia: number;
   tieneEvidencia: boolean;
-  esCategoriaDescuidada: boolean;
+  /** XP de la categoria dividida entre la media. 1 = en la media, 0 = a cero. */
+  cuotaRelativa: number;
   /** 0 = primera sesion de esa actividad hoy, 1 = segunda, etc. */
   ocurrenciaEnElDia: number;
   clase?: { dominante: string | null; descuidada: string | null };
@@ -60,16 +92,20 @@ export function calcularModificadores(s: SituacionRegistro): Modificadores {
   if (racha !== 1) detalle.racha = racha;
 
   if (s.esPrimeraVez) detalle.primeraVez = M.primeraVez;
-  if (s.haySinergia) detalle.sinergia = M.sinergia;
+
+  const sinergia = multiplicadorSinergia(s.categoriasDelDia);
+  if (sinergia !== 1) detalle.sinergia = sinergia;
+
   if (s.tieneEvidencia) detalle.evidencia = M.evidencia;
 
-  // La regla base de "categoria descuidada" y la pasiva de clase sobre la mas
-  // descuidada son el MISMO disparador. Multiplicarlas daria x1,56 por una
-  // sola razon, asi que se aplica una vez, con el valor mayor de las dos.
-  const esDescuidada = s.esCategoriaDescuidada || s.clase?.descuidada === s.categoriaId;
-  if (esDescuidada) {
-    detalle.categoriaDescuidada = Math.max(M.categoriaDescuidada, M.claseDescuidada);
-  }
+  // El empuje al equilibrio y la pasiva de clase sobre la mas descuidada son
+  // el MISMO disparador. Multiplicarlos daria x1,56 por una sola razon, asi
+  // que se aplica una vez, con el valor mayor de los dos.
+  const equilibrio = Math.max(
+    multiplicadorEquilibrio(s.cuotaRelativa),
+    s.clase?.descuidada === s.categoriaId ? M.claseDescuidada : 1,
+  );
+  if (equilibrio > 1) detalle.equilibrio = equilibrio;
 
   const repeticion = multiplicadorRepeticion(s.ocurrenciaEnElDia);
   if (repeticion !== 1) detalle.repeticion = repeticion;

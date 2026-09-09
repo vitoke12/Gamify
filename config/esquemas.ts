@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { ACTIVIDADES } from './actividades';
 import { ARBOLES } from './arboles';
 import { CATEGORIAS } from './categorias';
+import { ECONOMIA } from './economia';
 import { LOGROS } from './logros';
 import { MISIONES } from './misiones';
 
@@ -173,6 +174,25 @@ export function validarConfig(): ProblemaConfig[] {
     if (!MISIONES.some((m) => m.tipo === tipo)) {
       problemas.push(`misiones: no hay ninguna de tipo "${tipo}"`);
     }
+  }
+
+  // Techo diario de XP: tope de minutos x ritmo mas caro de la categoria.
+  // Tiene que ser el MISMO en todas. Si no, una categoria que se mide en
+  // actos caros gana el doble por dia que una que se mide en ratos, y el
+  // desequilibrio no viene de lo que haces sino de como se mide.
+  const techos = new Map<string, number>();
+  for (const cat of CATEGORIAS.filter((c) => c.activa)) {
+    const suyas = ACTIVIDADES.filter((a) => a.categoria === cat.key);
+    if (suyas.length === 0) continue;
+    const ritmoMasCaro = Math.max(
+      ...suyas.map((a) => a.xpBasePorMinuto ?? ECONOMIA.xpBasePorMinutoPorDefecto),
+    );
+    techos.set(cat.key, (cat.topeDiarioMin ?? ECONOMIA.topeDiarioMinPorDefecto) * ritmoMasCaro);
+  }
+  const distintos = [...new Set(techos.values())];
+  if (distintos.length > 1) {
+    const detalle = [...techos.entries()].map(([k, v]) => k + '=' + v).join(', ');
+    problemas.push(`economia: el techo diario de XP no es igual en todas las categorias (${detalle})`);
   }
 
   const keysLogro = new Set<string>();

@@ -20,7 +20,8 @@ const INTENSIDADES = [
 const ESCALAS = {
   minutos: { min: 5, max: 180, paso: 5, presets: [15, 30, 45, 60, 90], sufijo: 'min' },
   paginas: { min: 5, max: 200, paso: 5, presets: [10, 20, 30, 50], sufijo: 'pags' },
-  repeticiones: { min: 5, max: 300, paso: 5, presets: [10, 25, 50, 100], sufijo: 'reps' },
+  // 'repeticiones' son VECES: una conversación difícil, una aportación.
+  repeticiones: { min: 1, max: 20, paso: 1, presets: [1, 2, 3, 5], sufijo: 'veces' },
 } as const;
 
 export function RegistroRapido({ categorias }: { categorias: CategoriaRegistrable[] }) {

@@ -53,8 +53,11 @@ export type ContextoCalculo = {
   actividadesYaVistas: ReadonlySet<string>;
   /** Dias de racha por categoria al comenzar el dia. */
   diasRachaPorCategoria: Record<string, number>;
-  /** Categoria con menor nivel relativo del perfil. */
-  categoriaDescuidada: string | null;
+  /**
+   * XP de cada categoria dividida entre la media de todas las registrables.
+   * 1 = va en la media, 0 = sin tocar. Alimenta el empuje al equilibrio.
+   */
+  cuotaRelativaPorCategoria: Record<string, number>;
   /** Pasiva de clase (fase 4). Ausente = sin clase todavia. */
   clase?: { dominante: string | null; descuidada: string | null };
   /** Multiplicador temporal salido de un cofre, si hay uno vigente. */

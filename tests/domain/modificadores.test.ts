@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   calcularModificadores,
+  multiplicadorEquilibrio,
   multiplicadorRacha,
   multiplicadorRepeticion,
+  multiplicadorSinergia,
   type SituacionRegistro,
 } from '@/lib/domain/modificadores';
 
@@ -11,9 +13,9 @@ function situacion(over: Partial<SituacionRegistro> = {}): SituacionRegistro {
     categoriaId: 'fisico',
     diasRacha: 0,
     esPrimeraVez: false,
-    haySinergia: false,
+    categoriasDelDia: 1,
     tieneEvidencia: false,
-    esCategoriaDescuidada: false,
+    cuotaRelativa: 1,
     ocurrenciaEnElDia: 0,
     ...over,
   };
@@ -33,6 +35,38 @@ describe('multiplicador de racha', () => {
     expect(multiplicadorRacha(30)).toBe(1.4);
     expect(multiplicadorRacha(60)).toBe(1.5);
     expect(multiplicadorRacha(1000)).toBe(1.5);
+  });
+});
+
+describe('sinergia', () => {
+  it('no paga por tocar una sola categoria', () => {
+    expect(multiplicadorSinergia(0)).toBe(1);
+    expect(multiplicadorSinergia(1)).toBe(1);
+  });
+
+  it('escala con la amplitud del dia', () => {
+    expect(multiplicadorSinergia(2)).toBe(1.2);
+    expect(multiplicadorSinergia(3)).toBe(1.3);
+    expect(multiplicadorSinergia(4)).toBe(1.4);
+    expect(multiplicadorSinergia(9)).toBe(1.4);
+  });
+});
+
+describe('empuje al equilibrio', () => {
+  it('no empuja a lo que va en la media o por encima', () => {
+    expect(multiplicadorEquilibrio(1)).toBe(1);
+    expect(multiplicadorEquilibrio(2.5)).toBe(1);
+    expect(multiplicadorEquilibrio(0.5)).toBe(1);
+  });
+
+  it('empuja mas cuanto mas atras vas', () => {
+    expect(multiplicadorEquilibrio(0.25)).toBe(1.13);
+    expect(multiplicadorEquilibrio(0.1)).toBe(1.2);
+    expect(multiplicadorEquilibrio(0)).toBe(1.25);
+  });
+
+  it('aguanta un reparto sin datos', () => {
+    expect(multiplicadorEquilibrio(Number.NaN)).toBe(1);
   });
 });
 
@@ -65,22 +99,22 @@ describe('calcularModificadores', () => {
   it('aplica la pasiva de clase solo a la categoria que toca', () => {
     const clase = { dominante: 'mental', descuidada: 'fisico' };
     expect(calcularModificadores(situacion({ clase })).detalle).toEqual({
-      categoriaDescuidada: 1.25,
+      equilibrio: 1.25,
     });
     expect(calcularModificadores(situacion({ categoriaId: 'mental', clase })).detalle).toEqual({
       claseDominante: 1.1,
     });
   });
 
-  it('la pasiva de la descuidada no se apila con la regla base', () => {
+  it('la pasiva de la descuidada no se apila con el empuje al equilibrio', () => {
     // Son el mismo disparador: dos veces x1,25 seria x1,56 por una sola razon.
     const m = calcularModificadores(
       situacion({
-        esCategoriaDescuidada: true,
+        cuotaRelativa: 0,
         clase: { dominante: 'mental', descuidada: 'fisico' },
       }),
     );
-    expect(m.detalle).toEqual({ categoriaDescuidada: 1.25 });
+    expect(m.detalle).toEqual({ equilibrio: 1.25 });
     expect(m.producto).toBe(1.25);
   });
 
@@ -94,7 +128,7 @@ describe('calcularModificadores', () => {
 
   it('el cofre tampoco se salta el tope', () => {
     const m = calcularModificadores(
-      situacion({ diasRacha: 60, esPrimeraVez: true, haySinergia: true, multiplicadorCofre: 1.5 }),
+      situacion({ diasRacha: 60, esPrimeraVez: true, categoriasDelDia: 2, multiplicadorCofre: 1.5 }),
     );
     expect(m.productoTopado).toBe(4);
   });
@@ -104,13 +138,13 @@ describe('calcularModificadores', () => {
       situacion({
         diasRacha: 60,
         esPrimeraVez: true,
-        haySinergia: true,
+        categoriasDelDia: 3,
         tieneEvidencia: true,
-        esCategoriaDescuidada: true,
+        cuotaRelativa: 0,
         clase: { dominante: 'fisico', descuidada: null },
       }),
     );
-    expect(m.producto).toBeCloseTo(5.69, 2);
+    expect(m.producto).toBeCloseTo(6.17, 2);
     expect(m.productoTopado).toBe(4);
     expect(m.topeAplicado).toBe(true);
   });

@@ -7,7 +7,7 @@
  * calculados con reglas distintas y recalcularlos con conocimiento de causa.
  */
 export const ECONOMIA = {
-  version: 1,
+  version: 2,
 
   /**
    * Curva de niveles: coste en XP de pasar del nivel n al n+1.
@@ -21,6 +21,28 @@ export const ECONOMIA = {
   horaCorteDia: 5,
 
   xpBasePorMinutoPorDefecto: 3,
+
+  /**
+   * Ritmo de una actividad: cuánta XP vale cada minuto suyo.
+   *
+   * No todas las categorías tienen forma de duración. Físico, Mental u Ocio
+   * se miden en ratos: te sientas una hora. Social, Emocional o Financiero se
+   * miden en actos: una conversación difícil dura quince minutos y cuesta más
+   * que una hora de cinta; una transferencia a la cartera dura dos y pesa más
+   * que los dos minutos que ocupa.
+   *
+   * Pagar todo a 3 XP por minuto no era neutral: hacía que las categorías
+   * largas ganaran siempre, no por mérito sino por cómo se miden. El ritmo
+   * corrige eso sin tocar la fórmula.
+   */
+  ritmos: {
+    /** Cosas que ocupan mucho rato y cuestan poco por minuto. */
+    ligero: 1.5,
+    /** El caso normal: entrenar, leer, estudiar, cocinar. */
+    normal: 3,
+    /** Rato corto y caro: hablar en público, una conversación difícil. */
+    denso: 6,
+  },
 
   /** Tope de minutos computables por categoría y día lógico. */
   topeDiarioMinPorDefecto: 180,
@@ -57,14 +79,30 @@ export const ECONOMIA = {
     /** Primera vez que se registra esa actividad. Bonus de novedad. */
     primeraVez: 2.0,
 
-    /** Dos categorías distintas registradas el mismo día lógico. */
-    sinergia: 1.2,
+    /**
+     * Sinergia: escala con cuántas categorías distintas tocas el mismo día
+     * lógico. Con diez categorías vivas, pagar igual por tocar dos que por
+     * tocar cinco dejaba la amplitud sin recompensa a partir de la segunda.
+     */
+    escalaSinergia: [
+      { categorias: 2, mult: 1.2 },
+      { categorias: 3, mult: 1.3 },
+      { categorias: 4, mult: 1.4 },
+    ],
 
     /** Foto, captura o dato de wearable adjunto. */
     evidencia: 1.15,
 
-    /** La categoría con menor nivel relativo del perfil. */
-    categoriaDescuidada: 1.25,
+    /**
+     * Equilibrio: empuje graduado hacia lo que llevas flojo.
+     *
+     * Antes solo lo cobraba LA categoría más descuidada. Con diez vivas, eso
+     * significaba que nueve no recibían ningún empuje y la única que lo
+     * recibía cambiaba de dueña cada semana. Ahora lo cobra todo lo que esté
+     * por debajo de la mitad de la media, y tanto más cuanto más atrás vaya:
+     * a media o más, nada; a cero, el máximo.
+     */
+    equilibrio: { umbralCuota: 0.5, maximo: 1.25 },
 
     /** 1ª, 2ª y 3ª+ sesión de la misma actividad el mismo día. */
     decaimientoRepeticion: [1.0, 0.6, 0.3],

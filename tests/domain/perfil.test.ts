@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  categoriaMasDescuidada,
+  cuotasRelativas,
   estadoDeCategorias,
   fraseDeContexto,
   puntosDisponibles,
@@ -15,23 +15,25 @@ describe('estado de categorias', () => {
   });
 });
 
-describe('categoria descuidada', () => {
-  it('senala la de menos XP entre las registrables', () => {
-    expect(
-      categoriaMasDescuidada({ fisico: 5000, mental: 200, habitos: 900 }, [
-        'fisico',
-        'mental',
-        'habitos',
-      ]),
-    ).toBe('mental');
+describe('cuotas relativas', () => {
+  it('mide cada categoria contra la media, no contra la mayor', () => {
+    const cuotas = cuotasRelativas({ fisico: 600, mental: 300, habitos: 0 }, [
+      'fisico',
+      'mental',
+      'habitos',
+    ]);
+    // media = 300: fisico va al doble, mental justo, habitos a cero
+    expect(cuotas.fisico).toBe(2);
+    expect(cuotas.mental).toBe(1);
+    expect(cuotas.habitos).toBe(0);
   });
 
-  it('no senala ninguna si todavia no hay nada registrado', () => {
-    expect(categoriaMasDescuidada({}, ['fisico', 'mental'])).toBeNull();
+  it('el primer dia no hay nada descuidado, solo una app recien abierta', () => {
+    expect(cuotasRelativas({}, ['fisico', 'mental'])).toEqual({ fisico: 1, mental: 1 });
   });
 
-  it('no cuenta las categorias que aun no se pueden registrar', () => {
-    expect(categoriaMasDescuidada({ fisico: 100, mental: 50 }, ['fisico'])).toBe('fisico');
+  it('no cuenta las categorias que no se pasan', () => {
+    expect(cuotasRelativas({ fisico: 100, mental: 50 }, ['fisico'])).toEqual({ fisico: 1 });
   });
 });
 

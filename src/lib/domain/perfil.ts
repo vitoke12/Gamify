@@ -31,19 +31,26 @@ export function estadoDeCategorias(
 }
 
 /**
- * La categoria con menor nivel relativo entre las que se pueden registrar.
- * Si todavia no hay nada registrado en ninguna, no hay categoria descuidada:
- * senalar una al azar el primer dia no significa nada.
+ * Cuota de cada categoria respecto a la media: 1 es ir justo en la media, 0
+ * es no haberla tocado. Es lo que alimenta el empuje al equilibrio.
+ *
+ * Con todo a cero devuelve 1 para todas: el primer dia no hay nada
+ * descuidado, solo una app recien abierta.
  */
-export function categoriaMasDescuidada(
+export function cuotasRelativas(
   xpPorCategoria: Record<string, number>,
   categoriasActivas: readonly string[],
-): string | null {
-  if (categoriasActivas.length === 0) return null;
-  const conXp = categoriasActivas.map((c) => ({ c, xp: xpPorCategoria[c] ?? 0 }));
-  if (conXp.every((e) => e.xp === 0)) return null;
+): Record<string, number> {
+  const salida: Record<string, number> = {};
+  if (categoriasActivas.length === 0) return salida;
 
-  return conXp.reduce((peor, actual) => (actual.xp < peor.xp ? actual : peor)).c;
+  const total = categoriasActivas.reduce((a, c) => a + (xpPorCategoria[c] ?? 0), 0);
+  const media = total / categoriasActivas.length;
+
+  for (const c of categoriasActivas) {
+    salida[c] = media > 0 ? (xpPorCategoria[c] ?? 0) / media : 1;
+  }
+  return salida;
 }
 
 /** Puntos de habilidad disponibles: los ganados por niveles menos los gastados. */

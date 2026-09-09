@@ -23,6 +23,23 @@ describe('integridad del config', () => {
     expect(CATEGORIAS.every((c) => c.activa)).toBe(true);
   });
 
+  it('el techo diario de XP es el mismo en las diez categorias', () => {
+    const techos = CATEGORIAS.filter((c) => c.activa).map((c) => {
+      const suyas = ACTIVIDADES.filter((a) => a.categoria === c.key);
+      const ritmoMasCaro = Math.max(...suyas.map((a) => a.xpBasePorMinuto ?? 3));
+      return { key: c.key, techo: (c.topeDiarioMin ?? 180) * ritmoMasCaro };
+    });
+    expect(techos.every((t) => t.techo === 540)).toBe(true);
+    expect(techos).toHaveLength(10);
+  });
+
+  it('las actividades que son actos y no ratos se miden en veces', () => {
+    const enVeces = ACTIVIDADES.filter((a) => a.unidad === 'repeticiones').map((a) => a.key);
+    expect(enVeces).toContain('act-soc-dificil');
+    expect(enVeces).toContain('act-fin-invertir');
+    expect(enVeces).toContain('act-ave-primera');
+  });
+
   it('ocio consciente se puede registrar aunque no tenga arbol', () => {
     const ocio = CATEGORIAS.find((c) => c.key === 'ocio');
     expect(ocio?.activa).toBe(true);

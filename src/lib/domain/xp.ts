@@ -36,7 +36,7 @@ export function recalcularDia(
       .map((e) => contexto.actividades[e.actividadId]?.categoriaId)
       .filter((c): c is string => Boolean(c)),
   );
-  const haySinergia = categoriasDelDia.size > 1;
+  const cuantasCategorias = categoriasDelDia.size;
 
   const minutosUsadosPorCategoria: Record<string, number> = {};
   const vecesActividadHoy: Record<string, number> = {};
@@ -70,9 +70,9 @@ export function recalcularDia(
       categoriaId,
       diasRacha: contexto.diasRachaPorCategoria[categoriaId] ?? 0,
       esPrimeraVez,
-      haySinergia,
+      categoriasDelDia: cuantasCategorias,
       tieneEvidencia: entrada.tieneEvidencia,
-      esCategoriaDescuidada: contexto.categoriaDescuidada === categoriaId,
+      cuotaRelativa: contexto.cuotaRelativaPorCategoria[categoriaId] ?? 1,
       ocurrenciaEnElDia,
       clase: contexto.clase,
       multiplicadorCofre: contexto.multiplicadorCofre,

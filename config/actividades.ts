@@ -5,7 +5,14 @@
  *
  * `tierEquivalente` es lo que entra en el cálculo de dificultad relativa:
  * se compara con el nivel que el usuario tiene en el nodo asociado.
+ *
+ * La unidad dice de qué FORMA es la actividad. Unas se miden en ratos
+ * (minutos: entrenar, leer) y otras en actos (repeticiones = veces: una
+ * conversación difícil, una aportación a la cartera). Medir un acto en
+ * minutos lo dejaba en nada, porque lo caro no es lo que dura.
  */
+
+import { ECONOMIA } from './economia';
 
 export type Unidad = 'minutos' | 'repeticiones' | 'paginas';
 
@@ -21,6 +28,8 @@ export type DefActividad = {
   tierEquivalente: number;
   orden: number;
 };
+
+const { ligero, normal, denso } = ECONOMIA.ritmos;
 
 export const ACTIVIDADES: DefActividad[] = [
   // ── Físico ────────────────────────────────────────────────────────────
@@ -47,7 +56,7 @@ export const ACTIVIDADES: DefActividad[] = [
   { key: 'act-escritura', categoria: 'mental', nodo: 'pen-escritura', nombre: 'Escritura razonada', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 2, orden: 6 },
 
   // ── Hábitos ───────────────────────────────────────────────────────────
-  { key: 'act-dormir-bien', categoria: 'habitos', nodo: 'sue-horario', nombre: 'Dormir a la hora prevista', unidad: 'minutos', minutosPorUnidad: 1, xpBasePorMinuto: 1, tierEquivalente: 1, orden: 1 },
+  { key: 'act-dormir-bien', categoria: 'habitos', nodo: 'sue-horario', nombre: 'Dormir a la hora prevista', unidad: 'minutos', minutosPorUnidad: 1, xpBasePorMinuto: ligero, tierEquivalente: 1, orden: 1 },
   { key: 'act-cocinar', categoria: 'habitos', nodo: 'ali-cocina', nombre: 'Cocinar en casa', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 2, orden: 2 },
   { key: 'act-meditar', categoria: 'habitos', nodo: 'min-respiracion', nombre: 'Meditar', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 3 },
   { key: 'act-planificar', categoria: 'habitos', nodo: 'dis-planificacion', nombre: 'Planificar el día', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 4 },
@@ -55,37 +64,37 @@ export const ACTIVIDADES: DefActividad[] = [
 
   // ── Emocional ─────────────────────────────────────────────────────────
   { key: 'act-emo-diario', categoria: 'emocional', nodo: 'emo-diario', nombre: 'Escribir el diario', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 1 },
-  { key: 'act-emo-nombrar', categoria: 'emocional', nodo: 'emo-nombrar', nombre: 'Parar y nombrar lo que siento', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 2 },
-  { key: 'act-emo-incomodo', categoria: 'emocional', nodo: 'emo-incomodidad', nombre: 'Quedarme con lo incómodo', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 3 },
+  { key: 'act-emo-nombrar', categoria: 'emocional', nodo: 'emo-nombrar', nombre: 'Parar y nombrar lo que siento', unidad: 'minutos', minutosPorUnidad: 1, xpBasePorMinuto: denso, tierEquivalente: 1, orden: 2 },
+  { key: 'act-emo-incomodo', categoria: 'emocional', nodo: 'emo-incomodidad', nombre: 'Quedarme con lo incómodo', unidad: 'repeticiones', minutosPorUnidad: 15, xpBasePorMinuto: denso, tierEquivalente: 1, orden: 3 },
   { key: 'act-emo-acompanado', categoria: 'emocional', nodo: 'emo-acompanado', nombre: 'Sesión de terapia o mentoría', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 3, orden: 4 },
 
   // ── Social ────────────────────────────────────────────────────────────
   { key: 'act-soc-cercano', categoria: 'social', nodo: 'soc-contacto', nombre: 'Ver o llamar a alguien cercano', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 1 },
-  { key: 'act-soc-conocer', categoria: 'social', nodo: 'soc-conocer', nombre: 'Conocer a alguien nuevo', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 2 },
-  { key: 'act-soc-hablar', categoria: 'social', nodo: 'soc-grupo', nombre: 'Hablar ante un grupo', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 2, orden: 3 },
-  { key: 'act-soc-dificil', categoria: 'social', nodo: 'soc-conflicto', nombre: 'Conversación difícil', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 3, orden: 4 },
+  { key: 'act-soc-conocer', categoria: 'social', nodo: 'soc-conocer', nombre: 'Conocer a alguien nuevo', unidad: 'repeticiones', minutosPorUnidad: 15, xpBasePorMinuto: normal, tierEquivalente: 1, orden: 2 },
+  { key: 'act-soc-hablar', categoria: 'social', nodo: 'soc-grupo', nombre: 'Hablar ante un grupo', unidad: 'repeticiones', minutosPorUnidad: 20, xpBasePorMinuto: denso, tierEquivalente: 2, orden: 3 },
+  { key: 'act-soc-dificil', categoria: 'social', nodo: 'soc-conflicto', nombre: 'Conversación difícil', unidad: 'repeticiones', minutosPorUnidad: 20, xpBasePorMinuto: denso, tierEquivalente: 3, orden: 4 },
 
   // ── Profesional ───────────────────────────────────────────────────────
   { key: 'act-pro-proyecto', categoria: 'profesional', nodo: 'pro-entregar', nombre: 'Avanzar un proyecto', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 1 },
   { key: 'act-pro-formacion', categoria: 'profesional', nodo: 'pro-profundidad', nombre: 'Formación técnica', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 2, orden: 2 },
-  { key: 'act-pro-publicar', categoria: 'profesional', nodo: 'pro-publicar', nombre: 'Publicar algo de lo que sé', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 3 },
+  { key: 'act-pro-publicar', categoria: 'profesional', nodo: 'pro-publicar', nombre: 'Publicar algo de lo que sé', unidad: 'repeticiones', minutosPorUnidad: 20, xpBasePorMinuto: normal, tierEquivalente: 1, orden: 3 },
   { key: 'act-pro-dirigir', categoria: 'profesional', nodo: 'pro-dirigir', nombre: 'Coordinar a otros', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 3, orden: 4 },
 
   // ── Creativo ──────────────────────────────────────────────────────────
   { key: 'act-cre-escribir', categoria: 'creativo', nodo: 'cre-escribir', nombre: 'Escribir', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 1 },
-  { key: 'act-cre-foto', categoria: 'creativo', nodo: 'cre-disparar', nombre: 'Fotografiar', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 2 },
+  { key: 'act-cre-foto', categoria: 'creativo', nodo: 'cre-disparar', nombre: 'Fotografiar', unidad: 'minutos', minutosPorUnidad: 1, xpBasePorMinuto: normal, tierEquivalente: 1, orden: 2 },
   { key: 'act-cre-musica', categoria: 'creativo', nodo: 'cre-instrumento', nombre: 'Tocar o practicar música', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 3 },
   { key: 'act-cre-disenar', categoria: 'creativo', nodo: 'cre-composicion', nombre: 'Diseñar o editar', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 2, orden: 4 },
 
   // ── Aventura ──────────────────────────────────────────────────────────
-  { key: 'act-ave-primera', categoria: 'aventura', nodo: 'ave-primera-vez', nombre: 'Hacer algo por primera vez', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 1 },
+  { key: 'act-ave-primera', categoria: 'aventura', nodo: 'ave-primera-vez', nombre: 'Hacer algo por primera vez', unidad: 'repeticiones', minutosPorUnidad: 30, xpBasePorMinuto: normal, tierEquivalente: 1, orden: 1 },
   { key: 'act-ave-explorar', categoria: 'aventura', nodo: 'ave-solo', nombre: 'Explorar por mi cuenta', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 2, orden: 2 },
-  { key: 'act-ave-viaje', categoria: 'aventura', nodo: 'ave-escapada', nombre: 'Viaje o escapada', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 3 },
+  { key: 'act-ave-viaje', categoria: 'aventura', nodo: 'ave-escapada', nombre: 'Viaje o escapada', unidad: 'minutos', minutosPorUnidad: 1, xpBasePorMinuto: ligero, tierEquivalente: 1, orden: 3 },
 
   // ── Financiero ────────────────────────────────────────────────────────
   { key: 'act-fin-revisar', categoria: 'financiero', nodo: 'fin-registro', nombre: 'Revisar cuentas y gastos', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 1 },
   { key: 'act-fin-formacion', categoria: 'financiero', nodo: 'fin-formacion', nombre: 'Estudiar finanzas', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 2 },
-  { key: 'act-fin-invertir', categoria: 'financiero', nodo: 'fin-invertir', nombre: 'Aportar a la inversión', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 2, orden: 3 },
+  { key: 'act-fin-invertir', categoria: 'financiero', nodo: 'fin-invertir', nombre: 'Aportar a la inversión', unidad: 'repeticiones', minutosPorUnidad: 10, xpBasePorMinuto: denso, tierEquivalente: 2, orden: 3 },
   { key: 'act-fin-extra', categoria: 'financiero', nodo: 'fin-extra', nombre: 'Trabajar en un ingreso extra', unidad: 'minutos', minutosPorUnidad: 1, tierEquivalente: 1, orden: 4 },
 
   // ── Ocio consciente ───────────────────────────────────────────────────

@@ -26,7 +26,7 @@ function contexto(acts: Actividad[], over: Partial<ContextoCalculo> = {}): Conte
     // que no van del bonus de novedad no lo arrastran sin querer.
     actividadesYaVistas: new Set(acts.map((a) => a.id)),
     diasRachaPorCategoria: {},
-    categoriaDescuidada: null,
+    cuotaRelativaPorCategoria: {},
     horaCorteDia: 5,
     ...over,
   };
@@ -201,7 +201,7 @@ describe('tope al producto de modificadores', () => {
       contexto(acts, {
         actividadesYaVistas: new Set(),
         diasRachaPorCategoria: { fisico: 60 },
-        categoriaDescuidada: 'fisico',
+        cuotaRelativaPorCategoria: { fisico: 0 },
         clase: { dominante: null, descuidada: 'fisico' },
       }),
     );
