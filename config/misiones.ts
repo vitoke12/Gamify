@@ -52,6 +52,13 @@ export const MISIONES: DefMision[] = [
 
   { key: 'p-ocio-largo', tipo: 'principal', categoria: 'ocio', descripcion: 'Una hora de descanso deliberado, sin culpa', objetivo: { tipo: 'minutosCategoria', categoria: 'ocio', minutos: 60 }, xp: XP_MISION.principal },
 
+  { key: 'p-emocional-diario', tipo: 'principal', categoria: 'emocional', descripcion: 'Escribe 20 minutos de diario, sin filtrarte', objetivo: { tipo: 'minutosActividad', actividad: 'act-emo-diario', minutos: 20 }, xp: XP_MISION.principal },
+  { key: 'p-social-cercano', tipo: 'principal', categoria: 'social', descripcion: 'Dedica una hora a alguien que te importa', objetivo: { tipo: 'minutosCategoria', categoria: 'social', minutos: 60 }, xp: XP_MISION.principal },
+  { key: 'p-profesional-proyecto', tipo: 'principal', categoria: 'profesional', descripcion: 'Empuja un proyecto 60 minutos seguidos', objetivo: { tipo: 'minutosActividad', actividad: 'act-pro-proyecto', minutos: 60 }, xp: XP_MISION.principal },
+  { key: 'p-creativo-hacer', tipo: 'principal', categoria: 'creativo', descripcion: 'Haz algo creativo durante 45 minutos', objetivo: { tipo: 'minutosCategoria', categoria: 'creativo', minutos: 45 }, xp: XP_MISION.principal },
+  { key: 'p-aventura-nuevo', tipo: 'principal', categoria: 'aventura', descripcion: 'Haz hoy algo que no habias hecho nunca', objetivo: { tipo: 'sesionesActividad', actividad: 'act-ave-primera', sesiones: 1 }, xp: XP_MISION.principal },
+  { key: 'p-financiero-orden', tipo: 'principal', categoria: 'financiero', descripcion: 'Pon las cuentas al dia, 30 minutos', objetivo: { tipo: 'minutosCategoria', categoria: 'financiero', minutos: 30 }, xp: XP_MISION.principal },
+
   // ── Secundarias: se ofrecen tres y eliges dos ─────────────────────────
   { key: 's-fisico-corto', tipo: 'secundaria', categoria: 'fisico', descripcion: '20 minutos de movimiento', objetivo: { tipo: 'minutosCategoria', categoria: 'fisico', minutos: 20 }, xp: XP_MISION.secundaria },
   { key: 's-fisico-movilidad', tipo: 'secundaria', categoria: 'fisico', descripcion: '10 minutos de movilidad', objetivo: { tipo: 'minutosActividad', actividad: 'act-movilidad', minutos: 10 }, xp: XP_MISION.secundaria },
@@ -68,7 +75,25 @@ export const MISIONES: DefMision[] = [
   { key: 's-ocio-naturaleza', tipo: 'secundaria', categoria: 'ocio', descripcion: 'Sal a la naturaleza 20 minutos', objetivo: { tipo: 'minutosActividad', actividad: 'act-ocio-naturaleza', minutos: 20 }, xp: XP_MISION.secundaria },
   { key: 's-ocio-gente', tipo: 'secundaria', categoria: 'ocio', descripcion: 'Un rato con gente que quieres', objetivo: { tipo: 'sesionesActividad', actividad: 'act-ocio-social', sesiones: 1 }, xp: XP_MISION.secundaria },
 
-  // ── Ocio consciente: una al día, sin condiciones ──────────────────────
+  { key: 's-emocional-nombrar', tipo: 'secundaria', categoria: 'emocional', descripcion: 'Para 10 minutos y ponle nombre a lo que sientes', objetivo: { tipo: 'minutosActividad', actividad: 'act-emo-nombrar', minutos: 10 }, xp: XP_MISION.secundaria },
+  { key: 's-emocional-diario', tipo: 'secundaria', categoria: 'emocional', descripcion: 'Escribe unas lineas de diario', objetivo: { tipo: 'sesionesActividad', actividad: 'act-emo-diario', sesiones: 1 }, xp: XP_MISION.secundaria },
+
+  { key: 's-social-llamar', tipo: 'secundaria', categoria: 'social', descripcion: 'Llama a alguien sin motivo', objetivo: { tipo: 'sesionesActividad', actividad: 'act-soc-cercano', sesiones: 1 }, xp: XP_MISION.secundaria },
+  { key: 's-social-nuevo', tipo: 'secundaria', categoria: 'social', descripcion: 'Habla con alguien que no conocias', objetivo: { tipo: 'sesionesActividad', actividad: 'act-soc-conocer', sesiones: 1 }, xp: XP_MISION.secundaria },
+
+  { key: 's-profesional-formacion', tipo: 'secundaria', categoria: 'profesional', descripcion: '25 minutos de formacion tecnica', objetivo: { tipo: 'minutosActividad', actividad: 'act-pro-formacion', minutos: 25 }, xp: XP_MISION.secundaria },
+  { key: 's-profesional-publicar', tipo: 'secundaria', categoria: 'profesional', descripcion: 'Escribe algo publico sobre lo que sabes', objetivo: { tipo: 'sesionesActividad', actividad: 'act-pro-publicar', sesiones: 1 }, xp: XP_MISION.secundaria },
+
+  { key: 's-creativo-escribir', tipo: 'secundaria', categoria: 'creativo', descripcion: '20 minutos de escritura', objetivo: { tipo: 'minutosActividad', actividad: 'act-cre-escribir', minutos: 20 }, xp: XP_MISION.secundaria },
+  { key: 's-creativo-foto', tipo: 'secundaria', categoria: 'creativo', descripcion: 'Sal a hacer fotos', objetivo: { tipo: 'sesionesActividad', actividad: 'act-cre-foto', sesiones: 1 }, xp: XP_MISION.secundaria },
+
+  { key: 's-aventura-explorar', tipo: 'secundaria', categoria: 'aventura', descripcion: 'Explora 30 minutos por tu cuenta', objetivo: { tipo: 'minutosActividad', actividad: 'act-ave-explorar', minutos: 30 }, xp: XP_MISION.secundaria },
+  { key: 's-aventura-primera', tipo: 'secundaria', categoria: 'aventura', descripcion: 'Prueba algo nuevo, aunque sea pequeno', objetivo: { tipo: 'sesionesActividad', actividad: 'act-ave-primera', sesiones: 1 }, xp: XP_MISION.secundaria },
+
+  { key: 's-financiero-revisar', tipo: 'secundaria', categoria: 'financiero', descripcion: 'Revisa los gastos de la semana', objetivo: { tipo: 'sesionesActividad', actividad: 'act-fin-revisar', sesiones: 1 }, xp: XP_MISION.secundaria },
+  { key: 's-financiero-estudiar', tipo: 'secundaria', categoria: 'financiero', descripcion: '20 minutos de educacion financiera', objetivo: { tipo: 'minutosActividad', actividad: 'act-fin-formacion', minutos: 20 }, xp: XP_MISION.secundaria },
+
+  // ── Ocio consciente: una al día, sin condiciones ───────────────────────
   { key: 'o-sin-pantalla', tipo: 'ocio', categoria: 'ocio', descripcion: '30 minutos sin pantallas, sin hacer nada útil', objetivo: { tipo: 'minutosActividad', actividad: 'act-ocio-sin-pantalla', minutos: 30 }, xp: XP_MISION.ocio },
   { key: 'o-aficion', tipo: 'ocio', categoria: 'ocio', descripcion: 'Dedica un rato a una afición sin objetivo', objetivo: { tipo: 'sesionesActividad', actividad: 'act-ocio-juego', sesiones: 1 }, xp: XP_MISION.ocio },
   { key: 'o-cualquiera', tipo: 'ocio', categoria: 'ocio', descripcion: 'Descansa 20 minutos a conciencia', objetivo: { tipo: 'minutosCategoria', categoria: 'ocio', minutos: 20 }, xp: XP_MISION.ocio },
@@ -83,6 +108,8 @@ export const MISIONES: DefMision[] = [
   { key: 'w-tres-frentes', tipo: 'semanal', categoria: 'fisico', descripcion: 'Toca tres categorías distintas esta semana', objetivo: { tipo: 'categoriasDistintas', categorias: 3 }, xp: XP_MISION.semanal },
   { key: 'w-cuatro-frentes', tipo: 'semanal', categoria: 'mental', descripcion: 'Las cuatro categorías vivas en una sola semana', objetivo: { tipo: 'categoriasDistintas', categorias: 4 }, xp: XP_MISION.semanal },
   { key: 'w-volumen', tipo: 'semanal', categoria: 'fisico', descripcion: 'Ocho horas registradas en la semana, repartidas', objetivo: { tipo: 'minutosTotales', minutos: 480 }, xp: XP_MISION.semanal },
+  { key: 'w-cinco-frentes', tipo: 'semanal', categoria: 'profesional', descripcion: 'Cinco categorias distintas en una sola semana', objetivo: { tipo: 'categoriasDistintas', categorias: 5 }, xp: XP_MISION.semanal },
+  { key: 'w-equilibrio', tipo: 'semanal', categoria: 'ocio', descripcion: 'Tres categorias distintas sin dejarte el ocio', objetivo: { tipo: 'categoriasDistintas', categorias: 3 }, xp: XP_MISION.semanal },
 ];
 
 /** Veces que una misma plantilla puede repetirse dentro de una semana. */

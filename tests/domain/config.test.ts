@@ -13,8 +13,14 @@ describe('integridad del config', () => {
     );
   });
 
-  it('trae tres arboles vivos en el seed inicial', () => {
-    expect(ARBOLES.map((a) => a.categoria)).toEqual(['fisico', 'mental', 'habitos']);
+  it('las nueve categorias con escalera tienen arbol', () => {
+    expect(ARBOLES).toHaveLength(9);
+    expect(ARBOLES.map((a) => a.categoria)).toContain('fisico');
+    expect(ARBOLES.map((a) => a.categoria)).toContain('financiero');
+  });
+
+  it('todas las categorias se pueden registrar ya', () => {
+    expect(CATEGORIAS.every((c) => c.activa)).toBe(true);
   });
 
   it('ocio consciente se puede registrar aunque no tenga arbol', () => {
