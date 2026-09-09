@@ -56,8 +56,8 @@ export type NodoVista = {
   progreso: number;
   /** Nombres legibles de lo que falta. Un nodo bloqueado dice por qué. */
   faltan: string[];
-  /** Ids de los nodos de los que cuelga. Son las aristas de la constelación. */
-  requiere: string[];
+  /** De qué cuelga. Son las aristas de la constelación; puede venir de otra rama. */
+  requiere: { id: string; nombre: string; cumplido: boolean }[];
   comprable: boolean;
 };
 
@@ -180,7 +180,11 @@ export async function arbolDeCategoria(categoriaKey: string): Promise<ArbolVista
         faltan: requisitosPendientes(nodo, progresos).map(
           (id) => nombrePorId.get(id) ?? 'otro nodo',
         ),
-        requiere: nodo.requiere,
+        requiere: nodo.requiere.map((id) => ({
+          id,
+          nombre: nombrePorId.get(id) ?? 'otro nodo',
+          cumplido: Boolean(progresos[id]?.desbloqueado),
+        })),
         comprable: puedeDesbloquear(nodo, progresos, libres).puede,
       } satisfies NodoVista;
     }),

@@ -1,7 +1,9 @@
 import Link from 'next/link';
-import { Flame, Medal, Plus, Snowflake, Sparkles } from 'lucide-react';
+import { Download, Flame, Medal, Plus, Snowflake, Sparkles } from 'lucide-react';
 import { Avatar } from '@/components/juego/Avatar';
 import { BarraProgreso } from '@/components/juego/BarraProgreso';
+import { ChequeoDeSentido } from '@/components/juego/ChequeoDeSentido';
+import { Pwa } from '@/components/juego/Pwa';
 import { TableroMisiones } from '@/components/juego/TableroMisiones';
 import { resumenHome, ultimosRegistros } from '@/lib/db/consultas';
 import { categoriasConArbol } from '@/lib/db/arbol';
@@ -10,6 +12,7 @@ import { sincronizarLogros } from '@/lib/db/logros';
 import { sincronizarMisiones } from '@/lib/db/misiones';
 import { cofresSinAbrir } from '@/lib/db/recompensas';
 import { congeladoresGlobales, sincronizarRachas } from '@/lib/db/rachas';
+import { estadoDelChequeo } from '@/lib/db/sentido';
 import { fraseDeContexto } from '@/lib/domain/perfil';
 import { acentoDe, formatearXp, iconoDe } from '@/lib/ui/esferas';
 
@@ -26,12 +29,13 @@ export default async function Home() {
   const logrosNuevos = await sincronizarLogros();
   const { clase, esNueva } = await sincronizarClase();
 
-  const [resumen, ultimos, conArbol, congeladores, cofres] = await Promise.all([
+  const [resumen, ultimos, conArbol, congeladores, cofres, sentido] = await Promise.all([
     resumenHome(),
     ultimosRegistros(4),
     categoriasConArbol(),
     congeladoresGlobales(),
     cofresSinAbrir(),
+    estadoDelChequeo(),
   ]);
   const { global, racha } = resumen;
   const keysConArbol = new Set(conArbol.map((c) => c.key));
@@ -148,6 +152,10 @@ export default async function Home() {
             {congeladores === 1 ? ' (te queda 1 este mes).' : ` (te quedan ${congeladores} este mes).`}
           </p>
         )}
+
+        {/* La pregunta incomoda, una vez al mes. Va arriba a proposito:
+            escondida al final no la contestaria nadie. */}
+        <ChequeoDeSentido estado={sentido} />
 
         {/* 2. Progreso al siguiente nivel. Va aqui arriba porque estar cerca
             de completar es el disparador de accion mas potente del sistema. */}
@@ -269,6 +277,27 @@ export default async function Home() {
             </ul>
           </section>
         )}
+
+        <footer className="mt-8 border-t border-borde pt-4">
+          <Pwa
+            habilitado={process.env.NODE_ENV === 'production'}
+            rachaEnRiesgo={racha.enRiesgo}
+            diasDeRacha={racha.diasActuales}
+          />
+          <a
+            href="/api/exportar"
+            download
+            className="mt-3 flex items-center gap-2.5 rounded-xl border border-borde bg-superficie px-4 py-3"
+          >
+            <Download className="size-4 shrink-0 text-tenue" />
+            <span className="flex-1 text-xs text-tenue">
+              Descargar todos mis datos en un archivo
+            </span>
+          </a>
+          <p className="mt-3 text-center text-[11px] text-tenue">
+            Tus datos viven en tu ordenador y salen de aqui cuando quieras.
+          </p>
+        </footer>
       </main>
 
       {/* 6. Registro rapido, siempre a un pulgar de distancia. */}

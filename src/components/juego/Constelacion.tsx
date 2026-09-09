@@ -59,17 +59,37 @@ export function Constelacion({
 
   // Las aristas son los requisitos de verdad, no una suposición por tiers:
   // conectar todo con todo entre tiers pintaría precedencias que no existen.
-  const aristas = posiciones.flatMap((destino) =>
-    destino.nodo.requiere
-      .map((id) => porId.get(id))
-      .filter((origen): origen is Posicion => Boolean(origen))
-      .map((origen) => ({
+  const aristas: { origen: { x: number; y: number }; destino: Posicion; viva: boolean }[] = [];
+
+  // Hay requisitos que viven en OTRA rama: los nodos de maestría exigen
+  // amplitud, no profundidad. Se pintan como puertas de entrada en el borde
+  // superior. Sin esto la maestría salía flotando y sin una sola línea, como
+  // si no dependiera de nada.
+  const puertas: { x: number; y: number; nombre: string; cumplido: boolean }[] = [];
+
+  for (const destino of posiciones) {
+    const fuera = destino.nodo.requiere.filter((r) => !porId.has(r.id));
+    for (const r of destino.nodo.requiere) {
+      const origen = porId.get(r.id);
+      if (!origen) continue;
+      aristas.push({
         origen,
         destino,
         // Una arista "viva" es la que ya has recorrido: su origen esta abierto.
         viva: origen.nodo.estado !== 'bloqueado' && origen.nodo.estado !== 'disponible',
-      })),
-  );
+      });
+    }
+    for (const [i, r] of fuera.entries()) {
+      const puerta = {
+        x: ((i + 1) / (fuera.length + 1)) * ANCHO,
+        y: Math.max(12, destino.y - ALTO_TIER * 0.6),
+        nombre: r.nombre,
+        cumplido: r.cumplido,
+      };
+      puertas.push(puerta);
+      aristas.push({ origen: puerta, destino, viva: r.cumplido });
+    }
+  }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-borde bg-[#070b11]">
@@ -105,6 +125,30 @@ export function Constelacion({
             strokeDasharray={a.viva ? undefined : '3 4'}
             opacity={a.viva ? 0.5 : 0.55}
           />
+        ))}
+
+        {/* Puertas: lo que hace falta y vive en otra rama de esta categoría */}
+        {puertas.map((p, i) => (
+          <g key={`puerta-${i}`}>
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={3}
+              fill="none"
+              stroke={p.cumplido ? acento : '#3c4a5a'}
+              strokeWidth={1}
+              strokeDasharray="2 2"
+            />
+            <text
+              x={p.x}
+              y={p.y - 7}
+              textAnchor="middle"
+              fontSize={8}
+              fill={p.cumplido ? '#8b9cb0' : '#6b7c8f'}
+            >
+              {recortar(p.nombre)}
+            </text>
+          </g>
         ))}
 
         {posiciones.map(({ nodo, x, y }) => (
