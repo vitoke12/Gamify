@@ -3,9 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, ChevronLeft } from 'lucide-react';
+import { Check, ChevronLeft, CloudOff } from 'lucide-react';
 import type { CategoriaRegistrable } from '@/lib/db/consultas';
 import { registrarActividad, type ResultadoRegistro } from '@/lib/actions/registrar';
+import { encolar, nuevaClave } from '@/lib/cliente/cola';
 import { acentoDe, formatearXp, iconoDe } from '@/lib/ui/esferas';
 
 type Actividad = CategoriaRegistrable['actividades'][number];
@@ -33,6 +34,7 @@ export function RegistroRapido({ categorias }: { categorias: CategoriaRegistrabl
   const [cantidad, setCantidad] = useState(30);
   const [intensidad, setIntensidad] = useState<'suave' | 'normal' | 'exigente'>('normal');
   const [resultado, setResultado] = useState<ResultadoRegistro | null>(null);
+  const [sinRed, setSinRed] = useState(false);
 
   const escala = actividad ? ESCALAS[actividad.unidad] : ESCALAS.minutos;
 
@@ -56,9 +58,23 @@ export function RegistroRapido({ categorias }: { categorias: CategoriaRegistrabl
           setTimeout(() => router.push('/'), r.subioNivel ? 3200 : 2000);
         }
       } catch {
-        // Sin esto, un fallo del servidor deja el boton en "Guardando..."
-        // para siempre y la sesion registrada se pierde sin avisar.
-        setResultado({ ok: false, error: 'No se ha podido guardar. Intentalo otra vez.' });
+        // No ha llegado al servidor. En vez de perder la sesion, se guarda en
+        // el movil con su hora REAL y se sube sola al recuperar cobertura.
+        try {
+          await encolar({
+            clave: nuevaClave(),
+            actividadId: actividad.id,
+            actividadNombre: actividad.nombre,
+            categoriaNombre: categoria?.nombre ?? '',
+            cantidad,
+            intensidad,
+            fecha: new Date().toISOString(),
+          });
+          setSinRed(true);
+          setTimeout(() => router.push('/'), 2200);
+        } catch {
+          setResultado({ ok: false, error: 'No se ha podido guardar. Intentalo otra vez.' });
+        }
       }
     });
   }
@@ -196,7 +212,41 @@ export function RegistroRapido({ categorias }: { categorias: CategoriaRegistrabl
       )}
 
       <Celebracion resultado={resultado} />
+      <GuardadoSinRed visible={sinRed} />
     </div>
+  );
+}
+
+/**
+ * Sin cobertura no se puede saber cuanta XP toca: el motor recalcula el dia
+ * entero y eso necesita el servidor. Asi que se dice lo que SI se sabe (que
+ * esta guardado) y no se inventa un numero que luego cambiaria.
+ */
+function GuardadoSinRed({ visible }: { visible: boolean }) {
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 grid place-items-center bg-fondo/95 px-6 text-center"
+        >
+          <motion.div
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+          >
+            <CloudOff className="mx-auto size-12 text-sky-300" />
+            <p className="mt-4 text-xl font-semibold">Guardado sin conexion</p>
+            <p className="mx-auto mt-2 max-w-xs text-sm text-tenue">
+              Queda apuntado con la hora de ahora y se sube solo cuando vuelva la red. La XP se
+              calcula al subirlo.
+            </p>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

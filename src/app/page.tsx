@@ -4,6 +4,7 @@ import { Avatar } from '@/components/juego/Avatar';
 import { BarraProgreso } from '@/components/juego/BarraProgreso';
 import { ChequeoDeSentido } from '@/components/juego/ChequeoDeSentido';
 import { Pwa } from '@/components/juego/Pwa';
+import { Sincronizador } from '@/components/juego/Sincronizador';
 import { TableroMisiones } from '@/components/juego/TableroMisiones';
 import { resumenHome, ultimosRegistros } from '@/lib/db/consultas';
 import { categoriasConArbol } from '@/lib/db/arbol';
@@ -85,6 +86,8 @@ export default async function Home() {
             <span className="text-sm font-semibold tabular-nums">{racha.diasActuales}</span>
           </div>
         </header>
+
+        <Sincronizador />
 
         {/* Un congelador gastado se avisa siempre: consumirlo en silencio seria
             quitarle al usuario justo la informacion que le importa. */}

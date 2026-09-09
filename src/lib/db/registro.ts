@@ -12,14 +12,28 @@ import { progresoDesdeXp, type Progreso } from '@/lib/domain/niveles';
 import { recalcularDia } from '@/lib/domain/xp';
 import type { EntradaRegistro } from '@/lib/domain/tipos';
 import { contextoDelDia, horaCorte, xpPorCategoria } from './consultas';
-import { aJson } from './json';
+import { aJson, deJson } from './json';
 import { PERFIL, prisma } from './prisma';
+
+/** Cuánto atrás puede venir un registro de la cola. Más allá, algo va mal. */
+export const DIAS_MAXIMOS_DE_RETRASO = 14;
 
 export const entradaSchema = z.object({
   actividadId: z.string().min(1),
   cantidad: z.number().positive().max(1440),
   intensidad: z.enum(['suave', 'normal', 'exigente']),
   nota: z.string().max(280).optional(),
+  /**
+   * Cuándo ocurrió de verdad, en ISO. Lo manda la cola del móvil: un registro
+   * hecho sin cobertura a las siete de la tarde tiene que contar a las siete
+   * de la tarde, no cuando el teléfono vuelva a tener red.
+   */
+  fecha: z.string().min(20).max(40).optional(),
+  /**
+   * Clave que genera el móvil. Es lo que hace que reenviar la cola sea
+   * inofensivo: si ya existe un registro con esa clave, no se crea otro.
+   */
+  claveCliente: z.string().min(8).max(64).optional(),
 });
 
 export type DatosRegistro = z.infer<typeof entradaSchema>;
@@ -37,6 +51,8 @@ export type ResultadoRegistro =
       actividad: string;
       global: { nivelAntes: number; nivelDespues: number; progreso: Progreso };
       subioNivel: boolean;
+      /** true si la cola reenvió algo que el servidor ya tenía. */
+      yaEstaba?: boolean;
     }
   | { ok: false; error: string };
 
@@ -49,13 +65,65 @@ export type ResultadoRegistro =
  */
 export async function aplicarRegistro(
   datos: DatosRegistro,
-  ahora: Date = new Date(),
+  ahoraPorDefecto: Date = new Date(),
 ): Promise<ResultadoRegistro> {
   const parseado = entradaSchema.safeParse(datos);
   if (!parseado.success) {
     return { ok: false, error: parseado.error.issues[0]?.message ?? 'Datos invalidos' };
   }
   const entrada = parseado.data;
+
+  // Si viene de la cola offline, manda su hora real; si no, ahora.
+  let ahora = ahoraPorDefecto;
+  if (entrada.fecha) {
+    const declarada = new Date(entrada.fecha);
+    if (Number.isNaN(declarada.getTime())) {
+      return { ok: false, error: 'La fecha del registro no es válida' };
+    }
+    const atrasoDias = (ahoraPorDefecto.getTime() - declarada.getTime()) / 86_400_000;
+    if (atrasoDias > DIAS_MAXIMOS_DE_RETRASO) {
+      return { ok: false, error: 'Ese registro es demasiado viejo para entrar ahora' };
+    }
+    // Un poco de holgura por el reloj del móvil, pero nada de futuro real.
+    if (atrasoDias < -1 / 24) {
+      return { ok: false, error: 'Ese registro viene con fecha futura' };
+    }
+    ahora = declarada;
+  }
+
+  // Idempotencia: reenviar la cola no puede duplicar nada.
+  if (entrada.claveCliente) {
+    const yaEstaba = await prisma.activityLog.findUnique({
+      where: {
+        profileId_claveCliente: { profileId: PERFIL, claveCliente: entrada.claveCliente },
+      },
+      include: { activity: { include: { category: true } } },
+    });
+    if (yaEstaba) {
+      const xpDespues = await xpPorCategoria();
+      const totalDespues = Object.values(xpDespues).reduce((a, b) => a + b, 0);
+      const progreso = progresoDesdeXp(totalDespues);
+      const catKey = yaEstaba.activity.category.key;
+      return {
+        ok: true,
+        yaEstaba: true,
+        xpDelRegistro: yaEstaba.xpCalculado,
+        xpExtraRetroactivo: 0,
+        modificadores: deJson<Record<string, number>>(yaEstaba.modificadoresJson, {}),
+        dificultad: yaEstaba.dificultadRelativa,
+        minutosNoComputados: Math.round(yaEstaba.duracionBrutaMin - yaEstaba.duracionMin),
+        actividad: yaEstaba.activity.nombre,
+        categoria: {
+          key: catKey,
+          nombre: yaEstaba.activity.category.nombre,
+          nivelAntes: progreso.nivel,
+          nivelDespues: progreso.nivel,
+        },
+        global: { nivelAntes: progreso.nivel, nivelDespues: progreso.nivel, progreso },
+        subioNivel: false,
+      };
+    }
+  }
 
   const actividad = await prisma.activity.findUnique({
     where: { id: entrada.actividadId },
@@ -119,6 +187,7 @@ export async function aplicarRegistro(
           id: log.id,
           activityId: log.actividadId,
           nota: log.id === nuevoId ? (entrada.nota ?? null) : null,
+          claveCliente: log.id === nuevoId ? (entrada.claveCliente ?? null) : null,
           ...comun,
         },
       });

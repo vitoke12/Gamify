@@ -177,12 +177,16 @@ model ActivityLog {
   versionFormula     Int      @default(1)
   evidenciaUrl       String?
   nota               String?
+  // Clave que genera el movil al registrar sin cobertura. Es lo que hace que
+  // reenviar la cola no duplique nada: si ya existe, el registro ya entro.
+  claveCliente       String?
   creadoEn           DateTime @default(now())
 
   activity  Activity  @relation(fields: [activityId], references: [id])
   category  Category  @relation(fields: [categoryId], references: [id])
   xpEntries XpEntry[]
 
+  @@unique([profileId, claveCliente])
   @@index([profileId, diaLogico])
   @@index([categoryId, diaLogico])
   @@index([activityId, diaLogico])

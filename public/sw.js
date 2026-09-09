@@ -41,6 +41,14 @@ self.addEventListener('fetch', (evento) => {
     return;
   }
 
+  // Next navega por dentro pidiendo el arbol de la pagina (?_rsc=). Sin
+  // cachearlo, moverse por la app sin red se quedaba en blanco aunque la
+  // pagina entera estuviera guardada.
+  if (url.searchParams.has('_rsc')) {
+    evento.respondWith(redPrimero(peticion));
+    return;
+  }
+
   if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/icono')) {
     evento.respondWith(cachePrimero(peticion));
   }
