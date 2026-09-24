@@ -3,7 +3,7 @@
  * datos propios y es idempotente, asi que se puede volver a lanzar cada vez
  * que cambien las reglas del juego sin perder el historial del jugador.
  */
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { createRequire } from 'node:module';
 import { PrismaClient } from '@prisma/client';
 import { ACTIVIDADES } from '../config/actividades';
 import { ARBOLES } from '../config/arboles';
@@ -12,13 +12,35 @@ import { ECONOMIA } from '../config/economia';
 import { LOGROS } from '../config/logros';
 import { validarConfig } from '../config/esquemas';
 
-const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({
-    url: process.env.DATABASE_URL ?? 'file:./prisma/dev.db',
-  }),
-});
+// Mismo criterio que src/lib/db/prisma.ts: si hay TURSO_DATABASE_URL se
+// siembra ahi (produccion); si no, en el archivo local. El adapter de
+// better-sqlite3 se importa solo cuando hace falta, porque trae un binario
+// nativo por plataforma que no siempre esta compilado.
+const urlRemota = process.env.TURSO_DATABASE_URL;
+
+async function crearCliente(): Promise<PrismaClient> {
+  if (urlRemota) {
+    const cargar = createRequire(import.meta.url);
+    const { PrismaLibSql } = cargar('@prisma/adapter-libsql') as {
+      PrismaLibSql: new (config: { url: string; authToken?: string }) => never;
+    };
+    return new PrismaClient({
+      adapter: new PrismaLibSql({ url: urlRemota, authToken: process.env.TURSO_AUTH_TOKEN }),
+    });
+  }
+  const { PrismaBetterSqlite3 } = await import('@prisma/adapter-better-sqlite3');
+  return new PrismaClient({
+    adapter: new PrismaBetterSqlite3({
+      url: process.env.DATABASE_URL ?? 'file:./prisma/dev.db',
+    }),
+  });
+}
+
+let prisma: PrismaClient;
 
 async function main() {
+  prisma = await crearCliente();
+
   const problemas = validarConfig();
   if (problemas.length > 0) {
     console.error('El config tiene problemas y no se va a sembrar nada:\n');
